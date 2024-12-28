@@ -1,0 +1,77 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deployments.wonky.name" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    {{- include "deployments.wonky.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.deployments.wonky.autoscaling.enabled }}
+  replicas: {{ .Values.deployments.wonky.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      {{- with .Values.deployments.wonky.podLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      {{- with .Values.deployments.wonky.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "chart.labels" . | nindent 8 }}
+        {{- with .Values.deployments.wonky.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.deployments.wonky.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chart.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.deployments.wonky.podSecurityContext | nindent 8 }}
+      
+      containers:
+        - name: {{.Values.deployments.wonky.containers.wonky.name}}        
+          securityContext:
+            {{- toYaml .Values.deployments.wonky.containers.wonky.securityContext | nindent 12 }}
+          image: "{{ .Values.deployments.wonky.containers.wonky.image.repository }}:{{ .Values.deployments.wonky.containers.wonky.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.deployments.wonky.containers.wonky.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.wonky.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.deployments.wonky.containers.wonky.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.deployments.wonky.containers.wonky.readinessProbe | nindent 12 }}
+          env:
+          
+          resources:
+            {{- toYaml .Values.deployments.wonky.containers.wonky.resources | nindent 12 }}
+          {{- with .Values.deployments.wonky.containers.wonky.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      
+      {{- with .Values.deployments.wonky.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.wonky.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.wonky.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.wonky.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

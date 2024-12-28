@@ -1,0 +1,113 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deployments.jeeshop.name" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    {{- include "deployments.jeeshop.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.deployments.jeeshop.autoscaling.enabled }}
+  replicas: {{ .Values.deployments.jeeshop.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      {{- with .Values.deployments.jeeshop.podLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      {{- with .Values.deployments.jeeshop.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "chart.labels" . | nindent 8 }}
+        {{- with .Values.deployments.jeeshop.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.deployments.jeeshop.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chart.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.deployments.jeeshop.podSecurityContext | nindent 8 }}
+      
+      containers:
+        - name: {{.Values.deployments.jeeshop.containers.jeeshop.name}}        
+          securityContext:
+            {{- toYaml .Values.deployments.jeeshop.containers.jeeshop.securityContext | nindent 12 }}
+          image: "{{ .Values.deployments.jeeshop.containers.jeeshop.image.repository }}:{{ .Values.deployments.jeeshop.containers.jeeshop.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.deployments.jeeshop.containers.jeeshop.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.jeeshop.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.deployments.jeeshop.containers.jeeshop.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.deployments.jeeshop.containers.jeeshop.readinessProbe | nindent 12 }}
+          env:
+          
+            - name: JEESHOP_DATABASENAME
+              value: jeeshop
+
+            - name: JEESHOP_DATABASE_HOSTNAME
+              value: postgres:5432
+
+            - name: JEESHOP_DATABASE_USERNAME
+              value: jeeshop
+
+            - name: JEESHOP_DATABASE_PASSWORD
+              value: test
+
+            - name: JEESHOP_JDBC_DRIVER
+              value: postgresql
+
+            - name: JEESHOP_CATALOG_DATABASENAME
+              value: jeeshop
+
+            - name: JEESHOP_CATALOG_DATABASE_HOSTNAME
+              value: postgres:5432
+
+            - name: JEESHOP_CATALOG_DATABASE_USERNAME
+              value: jeeshop
+
+            - name: JEESHOP_CATALOG_DATABASE_PASSWORD
+              value: test
+
+            - name: JEESHOP_CATALOG_JDBC_DRIVER
+              value: postgresql
+
+            - name: JEESHOP_DATA_DIR
+              value: /jeeshop
+
+            - name: PROXY_ADDRESS_FORWARDING
+              value: "true"
+
+          resources:
+            {{- toYaml .Values.deployments.jeeshop.containers.jeeshop.resources | nindent 12 }}
+          {{- with .Values.deployments.jeeshop.containers.jeeshop.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      
+      {{- with .Values.deployments.jeeshop.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.jeeshop.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.jeeshop.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.jeeshop.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

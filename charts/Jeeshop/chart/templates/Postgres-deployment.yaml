@@ -1,0 +1,87 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deployments.postgres.name" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+    {{- include "deployments.postgres.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.deployments.postgres.autoscaling.enabled }}
+  replicas: {{ .Values.deployments.postgres.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      {{- with .Values.deployments.postgres.podLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      {{- with .Values.deployments.postgres.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "chart.labels" . | nindent 8 }}
+        {{- with .Values.deployments.postgres.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.deployments.postgres.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chart.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.deployments.postgres.podSecurityContext | nindent 8 }}
+      
+      containers:
+        - name: {{.Values.deployments.postgres.containers.postgres.name}}        
+          securityContext:
+            {{- toYaml .Values.deployments.postgres.containers.postgres.securityContext | nindent 12 }}
+          image: "{{ .Values.deployments.postgres.containers.postgres.image.repository }}:{{ .Values.deployments.postgres.containers.postgres.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.deployments.postgres.containers.postgres.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.postgres.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.deployments.postgres.containers.postgres.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.deployments.postgres.containers.postgres.readinessProbe | nindent 12 }}
+          env:
+          
+            - name: POSTGRES_DB
+              value: jeeshop
+              POSTGRES_DB: jeeshop
+          
+            - name: POSTGRES_USER
+              value: jeeshop
+          
+            - name: POSTGRES_PASSWORD
+              value: test
+          
+          resources:
+            {{- toYaml .Values.deployments.postgres.containers.postgres.resources | nindent 12 }}
+          {{- with .Values.deployments.postgres.containers.postgres.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      
+      {{- with .Values.deployments.postgres.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.postgres.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.postgres.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployments.postgres.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

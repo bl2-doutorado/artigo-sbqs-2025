@@ -1,0 +1,32 @@
+{{- if .Values.deployments.wonky.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wonky-{{ include "chart.fullname" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "deployments.wonky.name" . }}
+  minReplicas: {{ .Values.deployments.wonky.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.deployments.wonky.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.deployments.wonky.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.wonky.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.deployments.wonky.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.deployments.wonky.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
