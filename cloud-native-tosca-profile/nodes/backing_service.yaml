@@ -1,0 +1,3 @@
+cloud_native.nodes.BackingService:
+  description: A cloud-native backing service like a log aggregator or a business process engine.
+  derived_from: cloud_native.nodes.AbstractComponent

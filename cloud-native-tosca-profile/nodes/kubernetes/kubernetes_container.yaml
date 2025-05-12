@@ -1,0 +1,23 @@
+cloud_native.nodes.kubernetes.KubernetesApplication:
+  description: A Kubernetes application.
+  derived_from: cloud_template.nodes.Service
+  requirements:
+    - infrastructure:
+        description: Infrastructure needed to deploy the component
+        capability: gfinops.capabilities.Infrastructure.KubernetesCluster
+        relationship: gfinops.relationships.DeployedOn
+        count_range: [1, 1]
+    - storage:
+        description: Storage used by the component to persist data
+        capability: tosca.capabilities.Storage.AbstractKubernetesVolume
+        relationship: gfinops.relationships.PersistsOn
+        count_range: [0, UNBOUNDED]
+  capabilities:
+    service_endpoint:
+      description: A layer 4 endpoint provided by the component.
+      type: gfinops.capabilities.Endpoint
+    container_management:
+      type: cloud_template.capabilities.Kubernetes.ContainerManagement
+      valid_source_types: [cloud_template.nodes.Kubernetes.KubernetesContainer]
+
+  properties:

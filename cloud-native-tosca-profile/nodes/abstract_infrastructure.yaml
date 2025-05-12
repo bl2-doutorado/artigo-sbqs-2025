@@ -1,0 +1,22 @@
+cloud_native.nodes.AbstractInfrastructure:
+  description: An abstract element of the infrastructure.
+  derived_from: tosca.nodes.Compute
+  requirements:
+    - host:
+        description: Infrastructure needed to deploy the component
+        capability: cloud_native.capabilities.Infrastructure
+        relationship: gfinops.relationships.DeployedOn
+        count_range: [1, 1]
+    - endpoint_link:
+        description: Allows the definition of links between Components
+        capability: tosca.capabilities.Endpoint
+        relationship: gfinops.relationships.ConnectsTo.Link
+        count_range: [0, UNBOUNDED]
+    - storage:
+        description: Storage used by the component to persist data
+        capability: tosca.capabilities.Storage
+        relationship: tosca.relationships.AttachesTo
+        count_range: [0, UNBOUNDED]
+  capabilities:
+    host:
+      valid_source_types: [cloud_native.nodes.AbstractComponent]

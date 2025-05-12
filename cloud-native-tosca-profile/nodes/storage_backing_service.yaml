@@ -1,0 +1,3 @@
+cloud_native.nodes.StorageBackingService:
+  description: A cloud-native storage backing service like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
+  derived_from: cloud_native.nodes.AbstractComponent

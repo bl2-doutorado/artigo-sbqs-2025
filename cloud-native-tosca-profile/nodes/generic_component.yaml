@@ -1,0 +1,3 @@
+cloud_native.nodes.GenericComponent:
+  description: Represents a component that can not be mapped to any other service kind.
+  derived_from: cloud_native.nodes.AbstractComponent

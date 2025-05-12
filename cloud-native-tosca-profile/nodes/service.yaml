@@ -1,0 +1,3 @@
+cloud_native.nodes.Service:
+  description: A cloud-native service.
+  derived_from: cloud_native.nodes.AbstractComponent
