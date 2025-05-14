@@ -33,6 +33,7 @@
          2. [Attributes](#attributes-5)
          3. [Definition](#definition-5)
    3. [Storage elements](#storage-elements)
+   4. [Real images](#real-images)
 
 ## Objective
 
@@ -283,3 +284,12 @@ cloud_native.nodes.AbstractContainerOrchestratorCluster:
 [TOSCA YAML](nodes/abstract_container_orchestrator_cluster.yaml)
 
 ### Storage elements
+
+### Real images
+
+![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram1.png)
+![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram2.png)
+![alt text](figures/cloud-native-tosca-profile-uml2-deployment-diagram.png)
+![alt text](figures/cloud-native-tosca-profile-uml2-class-diagram.svg)
+![alt text](figures/cloud-native-tosca-profile-declarative_deploy-workflow-diagram.png)
+![alt text](figures/cloud-native-tosca-profile.png)
