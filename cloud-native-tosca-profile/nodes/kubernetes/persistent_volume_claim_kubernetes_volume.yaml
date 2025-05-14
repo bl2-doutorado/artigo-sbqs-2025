@@ -1,0 +1,6 @@
+cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume:
+  description: A Kubernetes persistent volume claim.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+  properties:
+    storage: string
+    storageClassName: string

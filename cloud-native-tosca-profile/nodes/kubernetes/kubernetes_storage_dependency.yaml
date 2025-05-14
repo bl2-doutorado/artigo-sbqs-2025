@@ -1,0 +1,3 @@
+cloud_native.nodes.Kubernetes.KubernetesStorageDependency:
+  description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+  derived_from: cloud_native.nodes.StorageBackingService

@@ -1,0 +1,6 @@
+cloud_native.nodes.Kubernetes.AbstractKubernetesVolume:
+  description: Any kind of Kubernetes defined volume.
+  derived_from: cloud_native.nodes.AbstractContainerOrchestratorVolume
+  properties:
+    name:
+      type: string

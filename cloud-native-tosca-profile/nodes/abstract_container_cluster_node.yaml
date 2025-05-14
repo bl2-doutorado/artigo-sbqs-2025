@@ -1,0 +1,8 @@
+cloud_native.nodes.AbstractContainerOrchestratorClusterNode:
+  derived_from: cloud_native.nodes.AbstractInfrastructure
+  description: A cluster node managed by a Container Orchestrator like Kubernetes or Nomad.
+  requirements:
+    - cluster:
+        description: Cluster that the node is joined
+        capability: cloud_native.capabilities.Cluster.Management
+        relationship: cloud_native.relationships.ManagedBy

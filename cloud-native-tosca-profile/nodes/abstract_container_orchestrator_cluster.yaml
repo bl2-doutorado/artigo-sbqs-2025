@@ -1,0 +1,18 @@
+cloud_native.nodes.AbstractContainerOrchestratorCluster:
+  description: A cluster managed by a Container Orchestrator like Kubernetes or Nomad.
+  derived_from: cloud_native.nodes.AbstractInfrastructure
+  properties:
+    distribuition:
+      type: string
+      required: true
+    distribuition_version:
+      type: version
+      required: true
+
+  capabilities:
+    host:
+      valid_source_types: [cloud_native.nodes.AbstractComponent]
+    manageNodes:
+      type: cloud_native.capabilities.Cluster.Management
+    defineStorages:
+      type: cloud_native.capabilities.Cluster.StorageDefinition

@@ -1,0 +1,7 @@
+cloud_native.nodes.Kubernetes.KubernetesClusterNode:
+  description: Physical or virtual machines that joined a Kubernetes cluster.
+  derived_from: cloud_native.nodes.AbstractContainerOrchestratorClusterNode
+  requirements:
+    - cluster:
+        node: cloud_native.nodes.Kubernetes.KubernetesCluster
+        description: Cluster that the node is joined

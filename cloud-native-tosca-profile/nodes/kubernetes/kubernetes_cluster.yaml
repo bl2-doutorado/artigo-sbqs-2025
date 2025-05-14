@@ -1,0 +1,3 @@
+cloud_native.nodes.Kubernetes.KubernetesCluster:
+  description: Kubernetes cluster managed by an specific Kubernete distribuition like K0s, K3s, RKE2, MicroK8s, among other.
+  derived_from: cloud_native.nodes.AbstractContainerOrchestratorCluster

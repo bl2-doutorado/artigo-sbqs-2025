@@ -1,0 +1,3 @@
+cloud_native.nodes.Kubernetes.HostPathKubernetesVolume:
+  description: A volume that is mapped in the HostPath.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume

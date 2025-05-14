@@ -5,7 +5,7 @@
 3. [Main elements](#main-elements)
    1. [Generic Node Types](#generic-node-types)
    2. [Kubernetes Specific Node Types](#kubernetes-specific-node-types)
-4. [Cloud-Native Applications Profile definitions in YAML](#cloud-native-applications-profile-definitions-in-yaml)
+4. [Cloud-Native Applications Profile definitions](#cloud-native-applications-profile-definitions)
    1. [Cloud-native application elements](#cloud-native-application-elements)
       1. [cloud_native.nodes.AbstractComponent](#cloud_nativenodesabstractcomponent)
          1. [Properties](#properties)
@@ -28,6 +28,10 @@
          1. [Properties](#properties-4)
          2. [Attributes](#attributes-4)
          3. [Definition](#definition-4)
+      2. [cloud_native.nodes.AbstractContainerOrchestratorCluster](#cloud_nativenodesabstractcontainerorchestratorcluster)
+         1. [Properties](#properties-5)
+         2. [Attributes](#attributes-5)
+         3. [Definition](#definition-5)
    3. [Storage elements](#storage-elements)
 
 ## Objective
@@ -43,7 +47,7 @@ The paper mentioned earlier presents an interesting cloud-native architecture qu
 
 ## Main elements
 
-This section summarizes the node types defined in this template and their functions. The [following subsection](#generic-node-types) defines generic node types, i.e., those that are technology-independent. The next section presents Kubernetes-specific node types and serves to show templates' extensibility in relation to cloud container orchestrators.
+This section summarizes the node types defined in this template and their functions. The [following subsection](#generic-node-types) defines generic node types, i.e., technology-independent ones. The following section presents Kubernetes-specific node types and shows templates' extensibility concerning cloud container orchestrators.
 
 ### Generic Node Types
 
@@ -87,9 +91,9 @@ In the next Figure, we focus on Kubernetes-specific compute infrastructure and s
 
 ![Kubernetes-specific compute infrastructure and storage node types and their relationships on the proposed template to model cloud-native applications.](figures/cloud-template-kubernetes-specific-infrastructure-and-data-node-types.png)
 
-## Cloud-Native Applications Profile definitions in YAML
+## Cloud-Native Applications Profile definitions
 
-This section is normative and describes all of the YAML grammar, definitions, and block structure for all keys and mappings defined for the Cloud-Native Applications Profile Version 1.0.0 specification, which are needed to describe a TOSCA Service template (in YAML).
+This section is normative and describes the properties, atributes, and definitions for all TOSCA node types defined for the Cloud-Native Applications Profile Version 1.0.0 specification, which are needed to describe a TOSCA Service template (in YAML).
 
 ### Cloud-native application elements
 
@@ -241,5 +245,41 @@ cloud_native.nodes.AbstractInfrastructure:
 ```
 
 [TOSCA YAML](nodes/abstract_infrastructure.yaml)
+
+#### cloud_native.nodes.AbstractContainerOrchestratorCluster
+
+The Cloud-native Abstract Infrastructure Node Type is the default type that all other Cloud Native Infrastructure Node Types derive from. This node sets requirements, capabitilities and properties that derived Node Types must provide, in a consistent way.
+
+##### Properties
+
+| Name | Required | Type | Constraints | Description |
+| ---- | -------- | ---- | ----------- | ----------- |
+| N/A  | N/A      | N/A  | N/A         | N/A         |
+
+##### Attributes
+
+| Name            | Required | Type               | Constraints | Description                                                                                                                                        |
+| --------------- | -------- | ------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| private_address | no       | string             | None        | The primary private IP address assigned by the cloud provider that applications may use to access the Compute node. \_Inherited from parent types. |
+| public_address  | no       | string             | None        | The primary public IP address assigned by the cloud provider that applications may use to access the Compute node. \_Inherited from parent types.  |
+| networks        | no       | map of NetworkInfo | None        | The map of logical networks assigned to the compute host instance and information about them. \_Inherited from parent types.                       |
+| ports           | no       | map of PortInfo    | None        | The map of logical ports assigned to the compute host instance and information about them. \_Inherited from parent types.                          |
+
+##### Definition
+
+```yaml
+cloud_native.nodes.AbstractContainerOrchestratorCluster:
+  description: A cluster managed by a Container Orchestrator like Kubernetes or Nomad.
+  derived_from: cloud_native.nodes.AbstractInfrastructure
+  properties:
+    distribution:
+      type: string
+      required: true
+    distribution_version:
+      type: version
+      required: true
+```
+
+[TOSCA YAML](nodes/abstract_container_orchestrator_cluster.yaml)
 
 ### Storage elements

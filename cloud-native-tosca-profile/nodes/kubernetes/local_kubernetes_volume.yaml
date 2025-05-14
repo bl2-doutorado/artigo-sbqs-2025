@@ -1,0 +1,3 @@
+cloud_native.nodes.Kubernetes.LocalKubernetesVolume:
+  description: A Kubernetes persistent volume claim.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume

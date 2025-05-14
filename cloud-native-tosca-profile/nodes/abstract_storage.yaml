@@ -1,0 +1,6 @@
+cloud_native.nodes.AbstractStorage:
+  description: Stores data.
+  capabilities:
+    storage:
+      type: tosca.capabilities.Storage
+      valid_source_types: [cloud_native.nodes.AbstractComponent]

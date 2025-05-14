@@ -1,0 +1,8 @@
+cloud_native.nodes.AbstractContainerOrchestratorVolume:
+  description: Stores data.
+  derived_from: cloud_native.nodes.AbstractStorage
+  requirements:
+    - cluster:
+        description: Cluster where the storage is defined
+        relationship: cloud_native.relationships.DefinedOn
+        capability: cloud_native.capabilities.Cluster.StorageDefinition
