@@ -137,7 +137,7 @@ cloud_native.nodes.AbstractComponent:
     - host:
         description: Infrastructure needed to deploy the component
         capability: tosca.capabilities.Compute
-        # count_range: [1, 1]
+        # TOSCA v2.0 - count_range: [1, 1]
         occurrences: [1, 1]
         node: cloud_native.nodes.AbstractInfrastructure
     - endpoint_link:
@@ -145,13 +145,13 @@ cloud_native.nodes.AbstractComponent:
         capability: tosca.capabilities.Endpoint
         relationship: tosca.relationships.ConnectsTo
         node: cloud_native.nodes.AbstractComponent
-        # count_range: [0, UNBOUNDED]
+        # TOSCA v2.0 - count_range: [0, UNBOUNDED]
         occurrences: [0, UNBOUNDED]
     - storage:
         description: Storage used by the component to persist data
         capability: tosca.capabilities.Storage
         relationship: cloud_native.relationships.PersistsOn
-        # count_range: [0, UNBOUNDED]
+        # TOSCA v2.0 - count_range: [0, UNBOUNDED]
         occurrences: [0, UNBOUNDED]
   capabilities:
     service_endpoint:
@@ -691,8 +691,9 @@ Using the Cloud-native TOSCA Template it is possible to model an application top
 
 We can model this topology this way:
 
-```
+```yaml
 topology_template:
+  # TOSCA v2.0 - service_template:
   node_templates:
     # Infrastructure Nodes
     k0sCluster:
@@ -771,14 +772,19 @@ topology_template:
             node: k0sCluster
 ```
 
-Observe that we have used FinOps tags in order to account
+Observe that we have used FinOps tags to make the components accountable.
 
-The result is:
+The result is presented in the following TOSCA Diagram:
 
 ![alt text](figures/cloud-native-tosca-profile.png)
 
-![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram1.png)
-![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram2.png)
+<!-- ![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram1.png) -->
+<!-- ![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram2.png) -->
+
+The following UML Deployment Diagram gives us a better understanding of the topology:
+
 ![alt text](figures/cloud-native-tosca-profile-uml2-deployment-diagram.png)
+
+We also present the deployment workflow of the cloud-native application components and the infrastructure and storage elements, which show the expected deployment order.
 
 ![alt text](figures/cloud-native-tosca-profile-declarative_deploy-workflow-diagram.png)
