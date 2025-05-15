@@ -1,3 +1,17 @@
 cloud_native.nodes.Kubernetes.HostPathKubernetesVolume:
   description: A volume that is mapped in the HostPath.
+  properties:
+    path:
+      description: The directory location on host
+      type: string
+      required: true
+
+    type:
+      description: 'Directory type. Can be one of: ‌ "", DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice, BlockDevice'
+      type: string
+      required: false
+      default: Directory
+      constraints:
+        - valid_values:
+            ["", DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice, BlockDevice]
   derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume

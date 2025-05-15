@@ -1,5 +1,6 @@
 cloud_native.nodes.AbstractStorage:
   description: Stores data.
+  derived_from: tosca.nodes.Abstract.Storage
   capabilities:
     storage:
       type: tosca.capabilities.Storage

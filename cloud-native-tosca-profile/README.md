@@ -8,32 +8,30 @@
 4. [Cloud-Native Applications Profile definitions](#cloud-native-applications-profile-definitions)
    1. [Cloud-native application elements](#cloud-native-application-elements)
       1. [cloud_native.nodes.AbstractComponent](#cloud_nativenodesabstractcomponent)
-         1. [Properties](#properties)
-         2. [Attributes](#attributes)
-         3. [Definition](#definition)
       2. [cloud_native.nodes.Service](#cloud_nativenodesservice)
-         1. [Properties](#properties-1)
-         2. [Attributes](#attributes-1)
-         3. [Definition](#definition-1)
       3. [cloud_native.nodes.BackingService](#cloud_nativenodesbackingservice)
-         1. [Properties](#properties-2)
-         2. [Attributes](#attributes-2)
-         3. [Definition](#definition-2)
       4. [cloud_native.nodes.StorageBackingService](#cloud_nativenodesstoragebackingservice)
-         1. [Properties](#properties-3)
-         2. [Attributes](#attributes-3)
-         3. [Definition](#definition-3)
+      5. [cloud_native.nodes.Kubernetes.KubernetesApplication](#cloud_nativenodeskuberneteskubernetesapplication)
+      6. [cloud_native.nodes.Kubernetes.KubernetesDependency](#cloud_nativenodeskuberneteskubernetesdependency)
+      7. [cloud_native.nodes.Kubernetes.KubernetesDependency](#cloud_nativenodeskuberneteskubernetesdependency-1)
    2. [Compute infrastructure elements](#compute-infrastructure-elements)
       1. [cloud_native.nodes.AbstractInfrastructure](#cloud_nativenodesabstractinfrastructure)
-         1. [Properties](#properties-4)
-         2. [Attributes](#attributes-4)
-         3. [Definition](#definition-4)
       2. [cloud_native.nodes.AbstractContainerOrchestratorCluster](#cloud_nativenodesabstractcontainerorchestratorcluster)
-         1. [Properties](#properties-5)
-         2. [Attributes](#attributes-5)
-         3. [Definition](#definition-5)
+      3. [cloud_native.nodes.AbstractContainerOrchestratorClusterNode](#cloud_nativenodesabstractcontainerorchestratorclusternode)
+      4. [cloud_native.nodes.kubernetes.KubernetesCluster](#cloud_nativenodeskuberneteskubernetescluster)
+      5. [cloud_native.nodes.Kubernetes.KubernetesClusterNode](#cloud_nativenodeskuberneteskubernetesclusternode)
    3. [Storage elements](#storage-elements)
-   4. [Real images](#real-images)
+      1. [cloud_native.nodes.AbstractStorage](#cloud_nativenodesabstractstorage)
+      2. [cloud_native.nodes.AbstractContainerOrchestratorVolume](#cloud_nativenodesabstractcontainerorchestratorvolume)
+      3. [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume)
+      4. [cloud_native.nodes.Kubernetes.HostPathKubernetesVolume](#cloud_nativenodeskuberneteshostpathkubernetesvolume)
+      5. [cloud_native.nodes.Kubernetes.SecretKubernetesVolume](#cloud_nativenodeskubernetessecretkubernetesvolume)
+      6. [cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume](#cloud_nativenodeskubernetespersistentvolumeclaimkubernetesvolume)
+      7. [cloud_native.nodes.Kubernetes.LocalKubernetesVolume](#cloud_nativenodeskuberneteslocalkubernetesvolume)
+      8. [cloud_native.nodes.Kubernetes.ConfigMapKubernetesVolume](#cloud_nativenodeskubernetesconfigmapkubernetesvolume)
+      9. [cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume](#cloud_nativenodeskubernetesemptydirkubernetesvolume)
+5. [Complete Class Diagram](#complete-class-diagram)
+6. [Using the Cloud-native TOSCA Template to model an application topology](#using-the-cloud-native-tosca-template-to-model-an-application-topology)
 
 ## Objective
 
@@ -48,7 +46,7 @@ The paper mentioned earlier presents an interesting cloud-native architecture qu
 
 ## Main elements
 
-This section summarizes the node types defined in this template and their functions. The [following subsection](#generic-node-types) defines generic node types, i.e., technology-independent ones. The following section presents Kubernetes-specific node types and shows templates' extensibility concerning cloud container orchestrators.
+This section summarizes the node types defined in this template and their functions. The following subsections define, respectively , [generic node types](#generic-node-types), i.e., technology-independent ones, and [Kubernetes-specific node types](#kubernetes-specific-node-types) that show templates' extensibility concerning cloud container orchestrators.
 
 ### Generic Node Types
 
@@ -80,7 +78,7 @@ represent derivations of the node type, and associations represent relationship 
 |                                   | Kubernetes Dependency         | A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications. | Derived from Backing Service                        |
 |                                   | Kubernetes Storage Dependency | A Kubernetes deployable application that stores data from other components.                                     | Derived from Storage Backing Service                |
 |                                   | Kubernetes POD                | A Kubernetes POD.                                                                                               |                                                     |
-| Compute infrastructure elements   | Kubernetes Cluster            | Kubernetes cluster managed by an specific Kubernete distribuition like K0s, K3s, RKE2, MicroK8s, among other.   | Derived from AbstractContainerOrchestratorCluster   |
+| Compute infrastructure elements   | Kubernetes Cluster            | Kubernetes cluster managed by an specific Kubernete distribution like K0s, K3s, RKE2, MicroK8s, among other.    | Derived from AbstractContainerOrchestratorCluster   |
 |                                   | Kubernetes Node               | Physical or virtual machines that joined a Kubernetes cluster.                                                  | Joined on AbstractContainerOrchestratorCluster      |
 | Storage elements                  | Abstract Kubernetes Volume    | Any kind of Kubernetes defined volume.                                                                          | Derived from Abstract Container Orchestrator Volume |
 
@@ -104,21 +102,23 @@ The Cloud-native Abstract Component Node Type is the default type that all other
 
 ##### Properties
 
-| Name              | Required | Type                                                   | Constraints | Description                                                                                                        |
-| ----------------- | -------- | ------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| component_version | no       | tosca:version                                          | None        | The optional software component’s version. _Inherited from parent types._                                          |
-| admin_credential  | no       | tosca.datatypes.Credential                             | None        | The optional credential that can be used to authenticate to the software component. _Inherited from parent types._ |
-| metadata          | yes      | cloud_native.datatypes.AbstractComponentMetadata       | None        | Metadata of the application, for instance name, development team, version, description.                            |
-| scalability       | yes      | tosca.capabilities.Scalable                            | None        |                                                                                                                    |
-| updateStrategy    | yes      | cloud_native.datatypes.AbstractComponentUpdateStrategy | None        | Strategy used to update the application.                                                                           |
+| Name              | Required | Type                                             | Constraints | Description                                                                                                        |
+| ----------------- | -------- | ------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| component_version | no       | tosca:version                                    | None        | The optional software component’s version. _Inherited from parent types._                                          |
+| admin_credential  | no       | tosca.datatypes.Credential                       | None        | The optional credential that can be used to authenticate to the software component. _Inherited from parent types._ |
+| metadata          | yes      | cloud_native.datatypes.AbstractComponentMetadata | None        | Metadata of the application, for instance name, development team, version, description.                            |
+
+| finops | yes | cloud_native.datatypes.FinOpsTags | None | Tags used to implement FinOps, such as environment, project, team, owner and cost center. |
+| scalability | false | cloud_native.datatypes.AbstractComponentScalability | None | Sets the mininum, maximum and default number of instances of the node. |
+| updateStrategy | yes | cloud_native.datatypes.AbstractComponentUpdateStrategy | None | Strategy used to update the application. |
 
 ##### Attributes
 
-| Name       | Required | Type   | Constraints      | Description                                                                                                                                                                                                                                                                                                                                               |
-| ---------- | -------- | ------ | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| tosca_id   | yes      | string | None             | A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type. \_Inherited from parent types.                                                                                                                                                                                                                |
-| tosca_name | yes      | string | None             | This attribute reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. _Inherited from parent types._ |
-| state      | yes      | string | default: initial | The state of the node instance. Allowed values: initial, creating, created, configuring, configured, starting, started, stopping, deleting, error. _Inherited from parent types._                                                                                                                                                                         |
+| Name       | Required | Type   | Constraints      | Description                                                                                                                                                                                                                                                                                                                                                   |
+| ---------- | -------- | ------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| tosca_id   | yes      | string | None             | A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type. _Inherited from parent types._                                                                                                                                                                                                                    |
+| tosca_name | yes      | string | None             | This attribute reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of the corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. _Inherited from parent types._ |
+| state      | yes      | string | default: initial | The state of the node instance. Allowed values: initial, creating, created, configuring, configured, starting, started, stopping, deleting, error. _Inherited from parent types._                                                                                                                                                                             |
 
 ##### Definition
 
@@ -126,26 +126,38 @@ The Cloud-native Abstract Component Node Type is the default type that all other
 cloud_native.nodes.AbstractComponent:
   description: An abstract element of the cloud-native application.
   derived_from: tosca.nodes.SoftwareComponent
+  properties:
+    scalability:
+      type: cloud_native.datatypes.Scalability
+      required: false
+    finops:
+      type: cloud_native.datatypes.FinOpsTags
+      required: true
   requirements:
     - host:
         description: Infrastructure needed to deploy the component
-        count_range: [1, 1]
+        capability: tosca.capabilities.Compute
+        # count_range: [1, 1]
+        occurrences: [1, 1]
         node: cloud_native.nodes.AbstractInfrastructure
     - endpoint_link:
         description: Allows the definition of links between Components
         capability: tosca.capabilities.Endpoint
         relationship: tosca.relationships.ConnectsTo
         node: cloud_native.nodes.AbstractComponent
-        count_range: [0, UNBOUNDED]
+        # count_range: [0, UNBOUNDED]
+        occurrences: [0, UNBOUNDED]
     - storage:
         description: Storage used by the component to persist data
         capability: tosca.capabilities.Storage
-        relationship: gfinops.relationships.PersistsOn #tosca.relationships.AttachesTo
-        count_range: [0, UNBOUNDED]
+        relationship: cloud_native.relationships.PersistsOn
+        # count_range: [0, UNBOUNDED]
+        occurrences: [0, UNBOUNDED]
   capabilities:
     service_endpoint:
       description: A layer 4 endpoint provided by the component.
       type: tosca.capabilities.Endpoint
+      occurrences: [0, UNBOUNDED]
 ```
 
 [TOSCA YAML](nodes/abstract_component.yaml)
@@ -174,7 +186,7 @@ cloud_native.nodes.Service:
 
 #### cloud_native.nodes.BackingService
 
-Services that implement common functionalities used by the services like a log aggregator or a business process engine.
+Services that implement common functionalities used by the services, such as a log aggregator or a business process engine.
 
 ##### Properties
 
@@ -188,7 +200,7 @@ Same from [cloud_native.nodes.AbstractComponent](#cloud_nativenodesabstractcompo
 
 ```yaml
 cloud_native.nodes.BackingService:
-  description: A cloud-native backing service like a log aggregator or a business process engine.
+  description: A cloud-native backing service, such as a log aggregator or a business process engine.
   derived_from: cloud_native.nodes.AbstractComponent
 ```
 
@@ -196,7 +208,7 @@ cloud_native.nodes.BackingService:
 
 #### cloud_native.nodes.StorageBackingService
 
-Services that storage data like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
+Services that store data like a SQL database, e.g., PostgresSQL, a NoSQL database, e.g., Cassandra, or any other type of storage backing service.
 
 ##### Properties
 
@@ -210,17 +222,83 @@ Same from [cloud_native.nodes.AbstractComponent](#cloud_nativenodesabstractcompo
 
 ```yaml
 cloud_native.nodes.StorageBackingService:
-  description: A cloud-native storage backing service like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
+  description: A cloud-native storage backing service like a SQL database, e.g., PostgresSQL, a NoSQL database, e.g., Cassandra, or any other type of storage backing service.
   derived_from: cloud_native.nodes.AbstractComponent
 ```
 
 [TOSCA YAML](nodes/storage_backing_service.yaml)
 
+#### cloud_native.nodes.Kubernetes.KubernetesApplication
+
+A Kubernetes deployable application that implements business features.
+
+##### Properties
+
+Same from [cloud_native.nodes.Service](#cloud_nativenodesservice).
+
+##### Attributes
+
+Same from [cloud_native.nodes.Service](#cloud_nativenodesservice).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.KubernetesApplication:
+  description: A Kubernetes deployable application that implements business features.
+  derived_from: cloud_native.nodes.Service
+```
+
+[TOSCA YAML](nodes/kubernetes/kubernetes_application.yaml)
+
+#### cloud_native.nodes.Kubernetes.KubernetesDependency
+
+A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+
+##### Properties
+
+Same from [cloud_native.nodes.BackingService](#cloud_nativenodesbackingservice).
+
+##### Attributes
+
+Same from [cloud_native.nodes.BackingService](#cloud_nativenodesbackingservice).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.KubernetesDependency:
+  description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+  derived_from: cloud_native.nodes.BackingService
+```
+
+[TOSCA YAML](nodes/kubernetes/kubernetes_dependency.yaml)
+
+#### cloud_native.nodes.Kubernetes.KubernetesDependency
+
+A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+
+##### Properties
+
+Same from [cloud_native.nodes.StorageBackingService](#cloud_nativenodesstoragebackingservice).
+
+##### Attributes
+
+Same from [cloud_native.nodes.StorageBackingService](#cloud_nativenodesstoragebackingservice).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.KubernetesStorageDependency:
+  description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+  derived_from: cloud_native.nodes.StorageBackingService
+```
+
+[TOSCA YAML](nodes/kubernetes/kubernetes_dependency.yaml)
+
 ### Compute infrastructure elements
 
 #### cloud_native.nodes.AbstractInfrastructure
 
-The Cloud-native Abstract Infrastructure Node Type is the default type that all other Cloud Native Infrastructure Node Types derive from. This node sets requirements, capabitilities and properties that derived Node Types must provide, in a consistent way.
+The Cloud-native Abstract Infrastructure Node Type is the default type from which all other Cloud Native Infrastructure Node Types derive. This node consistently sets the requirements, capabitilities and properties that derived Node Types must provide.
 
 ##### Properties
 
@@ -232,10 +310,10 @@ The Cloud-native Abstract Infrastructure Node Type is the default type that all 
 
 | Name            | Required | Type               | Constraints | Description                                                                                                                                        |
 | --------------- | -------- | ------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| private_address | no       | string             | None        | The primary private IP address assigned by the cloud provider that applications may use to access the Compute node. \_Inherited from parent types. |
-| public_address  | no       | string             | None        | The primary public IP address assigned by the cloud provider that applications may use to access the Compute node. \_Inherited from parent types.  |
-| networks        | no       | map of NetworkInfo | None        | The map of logical networks assigned to the compute host instance and information about them. \_Inherited from parent types.                       |
-| ports           | no       | map of PortInfo    | None        | The map of logical ports assigned to the compute host instance and information about them. \_Inherited from parent types.                          |
+| private_address | no       | string             | None        | The primary private IP address assigned by the cloud provider that applications may use to access the Compute node. _Inherited from parent types._ |
+| public_address  | no       | string             | None        | The primary public IP address assigned by the cloud provider that applications may use to access the Compute node. _Inherited from parent types._  |
+| networks        | no       | map of NetworkInfo | None        | The map of logical networks assigned to the compute host instance and information about them. _Inherited from parent types._                       |
+| ports           | no       | map of PortInfo    | None        | The map of logical ports assigned to the compute host instance and information about them. _Inherited from parent types._                          |
 
 ##### Definition
 
@@ -249,22 +327,18 @@ cloud_native.nodes.AbstractInfrastructure:
 
 #### cloud_native.nodes.AbstractContainerOrchestratorCluster
 
-The Cloud-native Abstract Infrastructure Node Type is the default type that all other Cloud Native Infrastructure Node Types derive from. This node sets requirements, capabitilities and properties that derived Node Types must provide, in a consistent way.
+A cluster managed by a Container Orchestrator like Kubernetes or Nomad.
 
 ##### Properties
 
-| Name | Required | Type | Constraints | Description |
-| ---- | -------- | ---- | ----------- | ----------- |
-| N/A  | N/A      | N/A  | N/A         | N/A         |
+| Name                   | Required | Type    | Constraints | Description                                                                           |
+| ---------------------- | -------- | ------- | ----------- | ------------------------------------------------------------------------------------- |
+| distribuituion         | yes      | string  | N/A         | Name of the Container Orchestrator Cluster distribution used to create the cluster    |
+| distribuituion_version | yes      | version | N/A         | Version of the Container Orchestrator Cluster distribution used to create the cluster |
 
 ##### Attributes
 
-| Name            | Required | Type               | Constraints | Description                                                                                                                                        |
-| --------------- | -------- | ------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| private_address | no       | string             | None        | The primary private IP address assigned by the cloud provider that applications may use to access the Compute node. \_Inherited from parent types. |
-| public_address  | no       | string             | None        | The primary public IP address assigned by the cloud provider that applications may use to access the Compute node. \_Inherited from parent types.  |
-| networks        | no       | map of NetworkInfo | None        | The map of logical networks assigned to the compute host instance and information about them. \_Inherited from parent types.                       |
-| ports           | no       | map of PortInfo    | None        | The map of logical ports assigned to the compute host instance and information about them. \_Inherited from parent types.                          |
+Same from [cloud_native.nodes.AbstractInfrastructure](#cloud_nativenodesabstractinfrastructure).
 
 ##### Definition
 
@@ -283,13 +357,428 @@ cloud_native.nodes.AbstractContainerOrchestratorCluster:
 
 [TOSCA YAML](nodes/abstract_container_orchestrator_cluster.yaml)
 
+#### cloud_native.nodes.AbstractContainerOrchestratorClusterNode
+
+A cluster node managed by a Container Orchestrator like Kubernetes or Nomad.
+
+##### Properties
+
+| Name                   | Required | Type    | Constraints | Description                                                                           |
+| ---------------------- | -------- | ------- | ----------- | ------------------------------------------------------------------------------------- |
+| distribuituion         | yes      | string  | N/A         | Name of the Container Orchestrator Cluster distribution used to create the cluster    |
+| distribuituion_version | yes      | version | N/A         | Version of the Container Orchestrator Cluster distribution used to create the cluster |
+
+##### Attributes
+
+Same from [cloud_native.nodes.AbstractInfrastructure](#cloud_nativenodesabstractinfrastructure).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.AbstractContainerOrchestratorClusterNode:
+  derived_from: cloud_native.nodes.AbstractInfrastructure
+  description: A cluster node managed by a Container Orchestrator like Kubernetes or Nomad.
+  requirements:
+    - cluster:
+        description: The cluster there the node is joined
+        capability: cloud_native.capabilities.Cluster.Management
+        relationship: cloud_native.relationships.ManagedBy
+```
+
+[TOSCA YAML](nodes/abstract_container_orchestrator_cluster_node.yaml)
+
+#### cloud_native.nodes.kubernetes.KubernetesCluster
+
+Kubernetes cluster managed by a specific Kubernete distribution like K0s, K3s, RKE2, MicroK8s, among others.
+
+##### Properties
+
+Same from [cloud_native.nodes.AbstractContainerOrchestratorCluster](#cloud_nativenodesabstractinfrastructure).
+
+##### Attributes
+
+Same from [cloud_native.nodes.AbstractContainerOrchestratorCluster](#cloud_nativenodesabstractinfrastructure).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.KubernetesCluster:
+  description: Kubernetes cluster managed by a specific Kubernete distribution like K0s, K3s, RKE2, MicroK8s, among others.
+  derived_from: cloud_native.nodes.AbstractContainerOrchestratorCluster
+```
+
+[TOSCA YAML](nodes/kubernetes/kubernetes_cluster.yaml)
+
+#### cloud_native.nodes.Kubernetes.KubernetesClusterNode
+
+Kubernetes cluster managed by an specific Kubernete distribution like K0s, K3s, RKE2, MicroK8s, among others.
+
+##### Properties
+
+Same from [cloud_native.nodes.AbstractContainerOrchestratorClusterNode](#cloud_nativenodesabstractinfrastructure).
+
+##### Attributes
+
+Same from [cloud_native.nodes.AbstractContainerOrchestratorClusterNode](#cloud_nativenodesabstractcontainerorchestratorclusternode).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.KubernetesClusterNode:
+  description: Physical or virtual machines that joined a Kubernetes cluster.
+  derived_from: cloud_native.nodes.AbstractContainerOrchestratorClusterNode
+  requirements:
+    - cluster:
+        node: cloud_native.nodes.Kubernetes.KubernetesCluster
+        description: Cluster that the node is joined
+```
+
+[TOSCA YAML](nodes/kubernetes/kubernetes_cluster_node.yaml)
+
 ### Storage elements
 
-### Real images
+#### cloud_native.nodes.AbstractStorage
+
+Stores data.
+
+##### Properties
+
+| Name | Required | Type             | Constraints            | Description                                                                                       |
+| ---- | -------- | ---------------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
+| name | yes      | string           | None                   | The logical name (or ID) of the storage resource. \__Inherited from parent types._                |
+| size | no       | scalar-unit.size | greater_or_equal: 0 MB | The requested initial storage size (default unit is in Gigabytes). _Inherited from parent types._ |
+
+##### Attributes
+
+| Name       | Required | Type   | Constraints      | Description                                                                                                                                                                                                                                                                                                                                                   |
+| ---------- | -------- | ------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| tosca_id   | yes      | string | None             | A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type. _Inherited from parent types._                                                                                                                                                                                                                    |
+| tosca_name | yes      | string | None             | This attribute reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of the corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. _Inherited from parent types._ |
+| state      | yes      | string | default: initial | The state of the node instance. Allowed values: initial, creating, created, configuring, configured, starting, started, stopping, deleting, error. _Inherited from parent types._                                                                                                                                                                             |
+
+##### Definition
+
+```yaml
+cloud_native.nodes.AbstractStorage:
+  description: Stores data.
+  derived_from: tosca.nodes.Abstract.Storage
+  capabilities:
+    storage:
+      type: tosca.capabilities.Storage
+      valid_source_types: [cloud_native.nodes.AbstractComponent]
+```
+
+[TOSCA YAML](nodes/abstract_storage.yaml)
+
+#### cloud_native.nodes.AbstractContainerOrchestratorVolume
+
+Stores data of components running in a container orchestrator cluster.
+
+##### Properties
+
+Same from [cloud_native.nodes.AbstractStorage](#cloud_nativenodesabstractstorage).
+
+##### Attributes
+
+Same from [cloud_native.nodes.AbstractStorage](#cloud_nativenodesabstractstorage).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.AbstractContainerOrchestratorVolume:
+  description: Stores data of components running in a container orchestrator cluster.
+  derived_from: cloud_native.nodes.AbstractStorage
+  requirements:
+    - cluster:
+        description: Cluster where the storage is defined
+        relationship: cloud_native.relationships.DefinedOn
+        capability: cloud_native.capabilities.Cluster.StorageDefinition
+```
+
+[TOSCA YAML](nodes/abstract_storage.yaml)
+
+#### cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+Stores data of components running in a container orchestrator cluster.
+
+##### Properties
+
+Same from [cloud_native.nodes.AbstractContainerOrchestratorVolume](#cloud_nativenodesabstractcontainerorchestratorvolume).
+
+##### Attributes
+
+Same from [cloud_native.nodes.AbstractContainerOrchestratorVolume](#cloud_nativenodesabstractcontainerorchestratorvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.AbstractKubernetesVolume:
+  description: Any kind of Kubernetes defined volume.
+  derived_from: cloud_native.nodes.AbstractContainerOrchestratorVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/abstract_kubernetes_volume.yaml)
+
+#### cloud_native.nodes.Kubernetes.HostPathKubernetesVolume
+
+A volume that is mapped in the HostPath.
+
+##### Properties
+
+All the properties from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume) and these:
+
+| Name | Required | Type   | Constraints                                                                                            | Description                      |
+| ---- | -------- | ------ | ------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| path | yes      | string | None                                                                                                   | The volume location on the host. |
+| type | no       | string | valid_values: ["", DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice, BlockDevice ] | Volume type.                     |
+
+##### Attributes
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.HostPathKubernetesVolume:
+  description: A volume that is mapped in the HostPath.
+  properties:
+    path:
+      description: The volume location on host
+      type: string
+      required: true
+
+    type:
+      description: 'Volume type. Can be one of: ‌ "", DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice, BlockDevice'
+      type: string
+      required: false
+      default: Directory
+      constraints:
+        - valid_values:
+            [
+              "",
+              DirectoryOrCreate,
+              Directory,
+              FileOrCreate,
+              File,
+              Socket,
+              CharDevice,
+              BlockDevice,
+            ]
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/host_path_kubernetes_volume.yaml)
+
+#### cloud_native.nodes.Kubernetes.SecretKubernetesVolume
+
+A volume that is mapped from a secret.
+
+##### Properties
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Attributes
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.SecretKubernetesVolume:
+  description: A volume that is mapped from a secret.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/secret_kubernetes_volume.yaml)
+
+#### cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume
+
+A volume that is mapped from a persistent volume claim.
+
+##### Properties
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Attributes
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume:
+  description: A volume that is mapped from a persistent volume claim.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/persistent_volume_claim_kubernetes_volume.yaml)
+
+#### cloud_native.nodes.Kubernetes.LocalKubernetesVolume
+
+A volume that is mapped from a persistent volume claim.
+
+##### Properties
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Attributes
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.LocalKubernetesVolume:
+  description: A volume that is mounted local storage device such as a disk, partition, or directory.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/local_kubernetes_volume.yaml)
+
+#### cloud_native.nodes.Kubernetes.ConfigMapKubernetesVolume
+
+A volume that is mounted from a config map.
+
+##### Properties
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Attributes
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.ConfigMapKubernetesVolume:
+  description: A volume that is mounted from a config map.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/config_map_kubernetes_volume.yaml)
+
+#### cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume
+
+A volume created when a Kubernetes Pod is assigned to a node, and it is initially empty.
+
+##### Properties
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Attributes
+
+Same from [cloud_native.nodes.Kubernetes.AbstractKubernetesVolume](#cloud_nativenodeskubernetesabstractkubernetesvolume).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume:
+  description: A volume created when a Kubernetes Pod is assigned to a node, and it is initially empty.
+  derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+```
+
+[TOSCA YAML](nodes/kubernetes/empty_dir_kubernetes_volume.yaml)
+
+## Complete Class Diagram
+
+The following class diagram shows all Cloud-native TOSCA Profile Node Types, their relationships, capabilities, properties, and requirements:
+
+![alt text](figures/cloud-native-tosca-profile-uml2-class-diagram.svg)
+
+## Using the Cloud-native TOSCA Template to model an application topology
+
+Using the Cloud-native TOSCA Template it is possible to model an application topology. Let's suppose that we have a Kubernetes cluster with 3 nodes (A, B and C) and the following application architecture, where we have a frontend application that communicates with a backend application which that stores its data in a database:
+
+We can model this topology this way:
+
+```
+topology_template:
+  node_templates:
+    # Infrastructure Nodes
+    k0sCluster:
+      type: cloud_native.nodes.Kubernetes.KubernetesCluster
+      properties:
+        distribution: k0s
+        distribution_version: 3.7.1
+
+    clusterNodeA:
+      type: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+
+    clusterNodeB:
+      type: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+    clusterNodeC:
+      type: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+
+    # Application Nodes
+    frontend:
+      type: cloud_native.nodes.Kubernetes.KubernetesApplication
+      properties:
+        finops:
+          application: frontend
+          environment: production
+          cost_center: cost_center_1
+          managed_via: gfinops
+          team: app-team
+      requirements:
+        - host:
+            node: k0sCluster
+        - endpoint_link:
+            node: backend
+
+    backend:
+      type: cloud_native.nodes.Kubernetes.KubernetesApplication
+      properties:
+        finops:
+          application: backend
+          environment: production
+          cost_center: cost_center_1
+          managed_via: gfinops
+          team: app-team
+      requirements:
+        - host:
+            node: k0sCluster
+        - endpoint_link:
+            node: database
+      capabilities:
+        service_endpoint:
+          properties:
+            protocol: http
+            port: 8080
+            url_path: /api
+
+    database:
+      type: cloud_native.nodes.Kubernetes.KubernetesStorageDependency
+      properties:
+        finops:
+          application: database
+          environment: production
+          cost_center: cost_center_2
+          managed_via: gfinops
+          team: db-team
+      requirements:
+        - host:
+            node: k0sCluster
+        - storage:
+            node: databaseVolume
+
+    databaseVolume:
+      type: cloud_native.nodes.Kubernetes.HostPathKubernetesVolume
+      properties:
+        name: db-volume
+        path: /data/db
+      requirements:
+        - cluster:
+            node: k0sCluster
+```
+
+Observe that we have used FinOps tags in order to account
+
+The result is:
+
+![alt text](figures/cloud-native-tosca-profile.png)
 
 ![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram1.png)
 ![alt text](figures/cloud-native-tosca-profile-uml2-component-diagram2.png)
 ![alt text](figures/cloud-native-tosca-profile-uml2-deployment-diagram.png)
-![alt text](figures/cloud-native-tosca-profile-uml2-class-diagram.svg)
+
 ![alt text](figures/cloud-native-tosca-profile-declarative_deploy-workflow-diagram.png)
-![alt text](figures/cloud-native-tosca-profile.png)

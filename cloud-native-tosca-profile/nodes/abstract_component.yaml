@@ -1,6 +1,10 @@
 cloud_native.nodes.AbstractComponent:
   description: An abstract element of the cloud-native application.
   derived_from: tosca.nodes.SoftwareComponent
+  properties:
+    scalability:
+      type: cloud_native.datatypes.Scalability
+      required: false
   requirements:
     - host:
         description: Infrastructure needed to deploy the component
@@ -21,3 +25,8 @@ cloud_native.nodes.AbstractComponent:
         relationship: cloud_native.relationships.PersistsOn
         # count_range: [0, UNBOUNDED]
         occurrences: [0, UNBOUNDED]
+  capabilities:
+    service_endpoint:
+      description: A layer 4 endpoint provided by the component.
+      type: tosca.capabilities.Endpoint
+      occurrences: [0, UNBOUNDED]
