@@ -1,0 +1,313 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+description: Cloud-native profile
+
+data_types:
+  cloud_native.datatypes.AbstractComponentScalability:
+    properties:
+      min_instances:
+        description: Indicates the minimum number of instances that should be created for the associated TOSCA Node Template by a TOSCA orchestrator.
+        type: integer
+        required: true
+        default: 1
+        constraints:
+          - greater_or_equal: 0
+
+      max_instances:
+        description: Indicates the maximum number of instances that should be created for the associated TOSCA Node Template by a TOSCA orchestrator.
+        type: integer
+        required: true
+        default: 1
+        constraints:
+          - greater_or_equal: 0
+        validation:
+          $greater_or_equal:
+            - $value
+            - $get_property: [SELF, minimum-instances]
+      default_instances:
+        description: Indicates the requested default number of instances that should be the starting number of instances a TOSCA orchestrator should attempt to allocate. This value MUST be in the range between the values set for 'min_instances' and 'max_instances' properties.
+        type: integer
+        required: false
+        constraints:
+          - greater_or_equal: 0
+        validation:
+          $and:
+            - $greater_or_equal:
+                - $value
+                - $get_property: [SELF, scalability.min_instance]
+            - $less_or_equal:
+                - $value
+                - $get_property: [SELF, scalability.max_instance]
+  cloud_native.datatypes.AbstractComponentUpdateStrategy:
+    properties:
+      strategy:
+        description: Name of the strategy used to update the component.
+        type: string
+
+  cloud_native.datatypes.FinOpsTags:
+    properties:
+      application:
+        description: Name of the application deployed by the component.
+        type: string
+        required: true
+      environment:
+        description: The software environment where this component is deployed.
+        type: string
+        required: true
+      project:
+        description: The organization's project where the component makes part of.
+        type: string
+        required: false
+      owner:
+        description: Who is responsible and accountable for the resource. Can be individuals or teams.
+        type: string
+        required: false
+      team:
+        description: Team that manages or utilizes the component.
+        type: string
+        required: true
+      organizational_unit:
+        description: Hierarchical structure within an organization that groups resources and people based on functions that is is responsible for the component. Allow conecting the component with a department or sector,
+        type: string
+        required: false
+      cost_center:
+        description: The cost center associated with a resource. Allows cost allocation and reporting.
+        type: string
+        required: true
+      managed_via:
+        description: Identifies how the component is managed. Can be manual, or using any tool like Terraform or Helm.
+        type: string
+        required: true
+      compliance:
+        description: "Level of compliance requirements. Examples: HIPAA, PCI, GDPR."
+        type: string
+        required: false
+
+node_types:
+  cloud_native.nodes.AbstractComponent:
+    description: An abstract element of the cloud-native application.
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      scalability:
+        type: cloud_native.datatypes.AbstractComponentScalability
+        required: false
+      finops:
+        type: cloud_native.datatypes.FinOpsTags
+        required: true
+      updateStrategy:
+        type: cloud_native.datatypes.AbstractComponentUpdateStrategy
+        required: false
+
+    requirements:
+      - host:
+          description: Infrastructure needed to deploy the component
+          capability: tosca.capabilities.Compute
+          # count_range: [1, 1]
+          occurrences: [1, 1]
+          node: cloud_native.nodes.AbstractInfrastructure
+      - endpoint_link:
+          description: Allows the definition of links between Components
+          capability: tosca.capabilities.Endpoint
+          relationship: tosca.relationships.ConnectsTo
+          node: cloud_native.nodes.AbstractComponent
+          # count_range: [0, UNBOUNDED]
+          occurrences: [0, UNBOUNDED]
+      - storage:
+          description: Storage used by the component to persist data
+          capability: tosca.capabilities.Storage
+          relationship: cloud_native.relationships.PersistsOn
+          # count_range: [0, UNBOUNDED]
+          occurrences: [0, UNBOUNDED]
+    capabilities:
+      service_endpoint:
+        description: A layer 4 endpoint provided by the component.
+        type: tosca.capabilities.Endpoint
+        occurrences: [0, UNBOUNDED]
+
+  cloud_native.nodes.Service:
+    description: A cloud-native service.
+    derived_from: cloud_native.nodes.AbstractComponent
+  cloud_native.nodes.BackingService:
+    description: A cloud-native backing service like a log aggregator or a business process engine.
+    derived_from: cloud_native.nodes.AbstractComponent
+  cloud_native.nodes.StorageBackingService:
+    description: A cloud-native storage backing service like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
+    derived_from: cloud_native.nodes.AbstractComponent
+
+  cloud_native.nodes.GenericComponent:
+    description: Represents a component that can not be mapped to any other service kind.
+    derived_from: cloud_native.nodes.AbstractComponent
+  cloud_native.nodes.AbstractInfrastructure:
+    description: An abstract element of the infrastructure.
+    derived_from: tosca.nodes.Compute
+    capabilities:
+      host:
+        type: tosca.capabilities.Compute
+        valid_source_types: [cloud_native.nodes.AbstractComponent]
+
+  cloud_native.nodes.AbstractContainerOrchestratorCluster:
+    description: A cluster managed by a Container Orchestrator like Kubernetes or Nomad.
+    derived_from: cloud_native.nodes.AbstractInfrastructure
+    properties:
+      distribution:
+        type: string
+        required: true
+      distribution_version:
+        type: version
+        required: true
+
+    capabilities:
+      host:
+        valid_source_types: [cloud_native.nodes.AbstractComponent]
+      manageNodes:
+        type: cloud_native.capabilities.Cluster.Management
+      defineStorages:
+        type: cloud_native.capabilities.Cluster.StorageDefinition
+
+  cloud_native.nodes.AbstractContainerOrchestratorClusterNode:
+    derived_from: cloud_native.nodes.AbstractInfrastructure
+    description: A cluster node managed by a Container Orchestrator like Kubernetes or Nomad.
+    requirements:
+      - cluster:
+          description: Cluster that the node is joined
+          capability: cloud_native.capabilities.Cluster.Management
+          relationship: cloud_native.relationships.ManagedBy
+
+  cloud_native.nodes.AbstractStorage:
+    description: Stores data.
+    derived_from: tosca.nodes.Abstract.Storage
+    capabilities:
+      storage:
+        type: tosca.capabilities.Storage
+        valid_source_types: [cloud_native.nodes.AbstractComponent]
+
+  cloud_native.nodes.AbstractContainerOrchestratorVolume:
+    description: Stores data of components running in a container orchestrator cluster.
+    derived_from: cloud_native.nodes.AbstractStorage
+    requirements:
+      - cluster:
+          description: Cluster where the storage is defined
+          relationship: cloud_native.relationships.DefinedOn
+          capability: cloud_native.capabilities.Cluster.StorageDefinition
+
+  # Kubernetes-specific Node Types
+
+  cloud_native.nodes.Kubernetes.KubernetesApplication:
+    description: A Kubernetes deployable application that implements business features.
+    derived_from: cloud_native.nodes.Service
+    capabilities:
+      declare:
+        type: cloud_native.capabilities.Application.ContainerDeclaration
+
+  cloud_native.nodes.Kubernetes.KubernetesDependency:
+    description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+    derived_from: cloud_native.nodes.BackingService
+    capabilities:
+      declare:
+        type: cloud_native.capabilities.Application.ContainerDeclaration
+
+  cloud_native.nodes.Kubernetes.KubernetesStorageDependency:
+    description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+    derived_from: cloud_native.nodes.StorageBackingService
+    capabilities:
+      declare:
+        type: cloud_native.capabilities.Application.ContainerDeclaration
+
+  cloud_native.nodes.Kubernetes.KubernetesContainer:
+    description: A Kubernetes managed container that is defined in a Kubernetes Application, Kubernetes Dependency or Kubernetes Storage Dependency.
+    derived_from: tosca.nodes.Root
+    properties:
+      image:
+        type: string
+    requirements:
+      - application:
+          description: Application that declares the container.
+          capability: cloud_native.capabilities.Application.ContainerDeclaration
+          relationship: cloud_native.relationships.DeclaredBy
+
+  cloud_native.nodes.Kubernetes.KubernetesCluster:
+    description: Kubernetes cluster managed by an specific Kubernete distribution like K0s, K3s, RKE2, MicroK8s, among other.
+    derived_from: cloud_native.nodes.AbstractContainerOrchestratorCluster
+
+  cloud_native.nodes.Kubernetes.KubernetesClusterNode:
+    description: Physical or virtual machines that joined a Kubernetes cluster.
+    derived_from: cloud_native.nodes.AbstractContainerOrchestratorClusterNode
+    requirements:
+      - cluster:
+          node: cloud_native.nodes.Kubernetes.KubernetesCluster
+          description: Cluster that the node is joined
+
+  cloud_native.nodes.Kubernetes.AbstractKubernetesVolume:
+    description: Any kind of Kubernetes defined volume.
+    derived_from: cloud_native.nodes.AbstractContainerOrchestratorVolume
+
+  cloud_native.nodes.Kubernetes.HostPathKubernetesVolume:
+    description: A volume that is mapped in the HostPath.
+    properties:
+      path:
+        description: The directory location on host
+        type: string
+        required: true
+
+      type:
+        description: 'Directory type. Can be one of: ‌ "", DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice, BlockDevice'
+        type: string
+        required: false
+        default: Directory
+        constraints:
+          - valid_values:
+              [
+                "",
+                DirectoryOrCreate,
+                Directory,
+                FileOrCreate,
+                File,
+                Socket,
+                CharDevice,
+                BlockDevice,
+              ]
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+  cloud_native.nodes.Kubernetes.SecretKubernetesVolume:
+    description: A volume that is mapped from a secret.
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+  cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume:
+    description: A volume that is mapped from a persistent volume claim.
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+  cloud_native.nodes.Kubernetes.LocalKubernetesVolume:
+    description: A volume that is a mounted local storage device such as a disk, partition or directory.
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+  cloud_native.nodes.Kubernetes.ConfigMapKubernetesVolume:
+    description: A volume that is a mounted from a config map.
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+  cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume:
+    description: A volume that is a created when a Kubernetes Pod is assigned to a node, and it is initially empty.
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+
+capability_types:
+  cloud_native.capabilities.Cluster.Management:
+    derived_from: tosca.capabilities.Root
+  cloud_native.capabilities.Cluster.StorageDefinition:
+    derived_from: tosca.capabilities.Root
+  cloud_native.capabilities.Application.ContainerDeclaration:
+    derived_from: tosca.capabilities.Root
+relationship_types:
+  cloud_native.relationships.PersistsOn:
+    derived_from: tosca.relationships.Root
+    valid_target_types: [tosca.capabilities.Storage]
+  cloud_native.relationships.ManagedBy:
+    derived_from: tosca.relationships.Root
+    valid_target_types: [cloud_native.capabilities.Cluster.Management]
+
+  cloud_native.relationships.DefinedOn:
+    description: Defines in which cluster the storage is defined on.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [cloud_native.capabilities.Cluster.StorageDefinition]
+
+  cloud_native.relationships.DeclaredBy:
+    description: Defines in which application the container is defined on.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [cloud_native.capabilities.Application.ContainerDeclaration]

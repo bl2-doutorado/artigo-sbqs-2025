@@ -14,6 +14,7 @@
       5. [cloud_native.nodes.Kubernetes.KubernetesApplication](#cloud_nativenodeskuberneteskubernetesapplication)
       6. [cloud_native.nodes.Kubernetes.KubernetesDependency](#cloud_nativenodeskuberneteskubernetesdependency)
       7. [cloud_native.nodes.Kubernetes.KubernetesDependency](#cloud_nativenodeskuberneteskubernetesdependency-1)
+      8. [cloud_native.nodes.Kubernetes.KubernetesDependency](#cloud_nativenodeskuberneteskubernetesdependency-2)
    2. [Compute infrastructure elements](#compute-infrastructure-elements)
       1. [cloud_native.nodes.AbstractInfrastructure](#cloud_nativenodesabstractinfrastructure)
       2. [cloud_native.nodes.AbstractContainerOrchestratorCluster](#cloud_nativenodesabstractcontainerorchestratorcluster)
@@ -30,8 +31,9 @@
       7. [cloud_native.nodes.Kubernetes.LocalKubernetesVolume](#cloud_nativenodeskuberneteslocalkubernetesvolume)
       8. [cloud_native.nodes.Kubernetes.ConfigMapKubernetesVolume](#cloud_nativenodeskubernetesconfigmapkubernetesvolume)
       9. [cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume](#cloud_nativenodeskubernetesemptydirkubernetesvolume)
-5. [Complete Class Diagram](#complete-class-diagram)
-6. [Using the Cloud-native TOSCA Template to model an application topology](#using-the-cloud-native-tosca-template-to-model-an-application-topology)
+5. [Cloud-native TOSCA profile file](#cloud-native-tosca-profile-file)
+6. [Complete Class Diagram](#complete-class-diagram)
+7. [Using the Cloud-native TOSCA Template to model an application topology](#using-the-cloud-native-tosca-template-to-model-an-application-topology)
 
 ## Objective
 
@@ -268,6 +270,28 @@ Same from [cloud_native.nodes.BackingService](#cloud_nativenodesbackingservice).
 cloud_native.nodes.Kubernetes.KubernetesDependency:
   description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
   derived_from: cloud_native.nodes.BackingService
+```
+
+[TOSCA YAML](nodes/kubernetes/kubernetes_dependency.yaml)
+
+#### cloud_native.nodes.Kubernetes.KubernetesDependency
+
+A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+
+##### Properties
+
+Same from [cloud_native.nodes.StorageBackingService](#cloud_nativenodesstoragebackingservice).
+
+##### Attributes
+
+Same from [cloud_native.nodes.StorageBackingService](#cloud_nativenodesstoragebackingservice).
+
+##### Definition
+
+```yaml
+cloud_native.nodes.Kubernetes.KubernetesStorageDependency:
+  description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
+  derived_from: cloud_native.nodes.StorageBackingService
 ```
 
 [TOSCA YAML](nodes/kubernetes/kubernetes_dependency.yaml)
@@ -679,6 +703,10 @@ cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume:
 
 [TOSCA YAML](nodes/kubernetes/empty_dir_kubernetes_volume.yaml)
 
+## Cloud-native TOSCA profile file
+
+This is the [complete cloud-native TOSCA profile file](profile.yaml).
+
 ## Complete Class Diagram
 
 The following class diagram shows all Cloud-native TOSCA Profile Node Types, their relationships, capabilities, properties, and requirements:
@@ -689,7 +717,7 @@ The following class diagram shows all Cloud-native TOSCA Profile Node Types, the
 
 Using the Cloud-native TOSCA Template it is possible to model an application topology. Let's suppose that we have a Kubernetes cluster with 3 nodes (A, B and C) and the following application architecture, where we have a frontend application that communicates with a backend application which that stores its data in a database:
 
-We can model this topology this way:
+We can model this topology this way assuming that each application has only one container, respectively , although it is possible to :
 
 ```yaml
 topology_template:
@@ -726,6 +754,14 @@ topology_template:
         - endpoint_link:
             node: backend
 
+    frontendContainer1:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "nginx:1.25"
+      requirements:
+        - application:
+            node: frontend
+
     backend:
       type: cloud_native.nodes.Kubernetes.KubernetesApplication
       properties:
@@ -747,6 +783,14 @@ topology_template:
             port: 8080
             url_path: /api
 
+    backendContainer1:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "tomcat:9"
+      requirements:
+        - application:
+            node: backend
+
     database:
       type: cloud_native.nodes.Kubernetes.KubernetesStorageDependency
       properties:
@@ -761,6 +805,13 @@ topology_template:
             node: k0sCluster
         - storage:
             node: databaseVolume
+    databaseContainer1:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "postgres:9"
+      requirements:
+        - application:
+            node: database
 
     databaseVolume:
       type: cloud_native.nodes.Kubernetes.HostPathKubernetesVolume
