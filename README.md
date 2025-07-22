@@ -1,6 +1,6 @@
-# ISSRE 2025 - Towards an automated choice of topology for cloud application deployment based on FinOps practices
+# SBQS 2025 - Towards an automated choice of topology for cloud application deployment based on FinOps practices
 
-This repository contains files and content introduced in the paper "Towards an automated choice of topology for cloud application deployment based on FinOps practices" submitted to ISSRE 2025, and is organized this way:
+This repository contains files and content introduced in the paper "Towards an automated choice of topology for cloud application deployment based on FinOps practices" submitted to SBQS 2025, and is organized this way:
 
 ### Repository Content:
 
