@@ -1,6 +1,6 @@
-# Towards an automated choice of topology for cloud application deployment based on FinOps practices
+# A-FinOps: a framework definition aiming to automate decision-making for multi-cloud application deployment
 
-This repository contains files and content introduced in the paper "Towards an automated choice of topology for cloud application deployment based on FinOps practices", and is organized this way:
+This repository contains files and content introduced in the paper "A-FinOps: a framework definition aiming to automate decision-making for multi-cloud application deployment", and is organized this way:
 
 ### Repository Content:
 
