@@ -190,20 +190,26 @@ node_types:
     capabilities:
       host:
         valid_source_types: [cloud_native.nodes.AbstractComponent]
-      manageNodes:
+      manage_nodes:
         type: cloud_native.capabilities.Cluster.Management
-      defineStorages:
+      define_Storages:
         type: cloud_native.capabilities.Cluster.StorageDefinition
 
   cloud_native.nodes.AbstractContainerOrchestratorClusterNode:
     derived_from: cloud_native.nodes.AbstractInfrastructure
     description: A cluster node managed by a Container Orchestrator like Kubernetes or Nomad.
+    properties:
+      node_role:
+        type: string
+        default: worker
+        constraints:
+          - valid_values: [ worker, ingress, storage, master ]
     requirements:
       - cluster:
           description: Cluster that the node is joined
           capability: cloud_native.capabilities.Cluster.Management
           relationship: cloud_native.relationships.ManagedBy
-
+          node: cloud_native.nodes.AbstractContainerOrchestratorCluster
   cloud_native.nodes.AbstractStorage:
     description: Stores data.
     derived_from: tosca.nodes.Abstract.Storage
