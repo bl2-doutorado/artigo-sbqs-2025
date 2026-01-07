@@ -44,43 +44,47 @@ data_types:
         type: string
 
   cloud_native.datatypes.FinOpsTags:
+    description: Mandatory and optional tags for financial operations and governance.
     properties:
       application:
-        description: Name of the application deployed by the component.
         type: string
         required: true
       environment:
-        description: The software environment where this component is deployed.
         type: string
         required: true
+        constraints:
+          - valid_values: [ dev, staging, prod, sandbox ]
       project:
-        description: The organization's project where the component makes part of.
         type: string
         required: false
       owner:
-        description: Who is responsible and accountable for the resource. Can be individuals or teams.
         type: string
         required: false
+        description: "Email or ID of the person accountable."
       team:
-        description: Team that manages or utilizes the component.
         type: string
         required: true
       organizational_unit:
-        description: Hierarchical structure within an organization that groups resources and people based on functions that is is responsible for the component. Allow conecting the component with a department or sector,
         type: string
         required: false
       cost_center:
-        description: The cost center associated with a resource. Allows cost allocation and reporting.
         type: string
         required: true
+        # Exemplo de validação: deve começar com CC- seguido de números
+        # constraints:
+        #   - pattern: '^CC-[0-9]+$' 
       managed_via:
-        description: Identifies how the component is managed. Can be manual, or using any tool like Terraform or Helm.
         type: string
         required: true
+        default: manual
+        constraints:
+          - valid_values: [ manual, terraform, helm, tosca, crossplane ]
       compliance:
-        description: "Level of compliance requirements. Examples: HIPAA, PCI, GDPR."
-        type: string
+        type: list
+        entry_schema:
+          type: string
         required: false
+        description: "List of compliance standards (e.g., [HIPAA, GDPR])."
 
 node_types:
   cloud_native.nodes.AbstractComponent:
