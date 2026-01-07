@@ -47,11 +47,29 @@ data_types:
         type: integer
         required: false
         description: "Métrica alvo de memória para gatilho de escala."
+  
   cloud_native.datatypes.AbstractComponentUpdateStrategy:
+    description: Strategy for updating components without downtime.
     properties:
-      strategy:
-        description: Name of the strategy used to update the component.
+      type:
         type: string
+        description: Name of the strategy.
+        required: true
+        constraints:
+          - valid_values: [ rolling_update, recreate, blue_green, canary ]
+        default: rolling_update
+      
+      max_surge:
+        type: string # String para permitir "1" ou "25%"
+        description: Maximum number or percentage of instances that can be created above the desired cost.
+        required: false
+        default: "25%"
+      
+      max_unavailable:
+        type: string
+        description: Maximum number or percentage of instances that can be unavailable during the update.
+        required: false
+        default: "25%"
 
   cloud_native.datatypes.FinOpsTags:
     description: Mandatory and optional tags for financial operations and governance.
