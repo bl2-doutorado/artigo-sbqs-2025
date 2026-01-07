@@ -135,7 +135,7 @@ node_types:
           capability: tosca.capabilities.Compute
           # count_range: [1, 1]
           occurrences: [0, 1]
-          node: cloud_native.nodes.AbstractInfrastructure
+          node: cloud_native.nodes.AbstractWorkspace
       - endpoint_link:
           description: Allows the definition of links between Components
           capability: tosca.capabilities.Endpoint
@@ -210,6 +210,29 @@ node_types:
           capability: cloud_native.capabilities.Cluster.Management
           relationship: cloud_native.relationships.ManagedBy
           node: cloud_native.nodes.AbstractContainerOrchestratorCluster
+
+  
+  cloud_native.nodes.AbstractWorkspace:
+    description: A logical isolation unit within a cluster (Namespace, Project, etc).
+    derived_from: tosca.nodes.Root
+    properties:
+      workspace_name:
+        type: string
+        required: true
+      resource_quota:
+        type: map # Ex: { cpu: "4", memory: "8Gi" }
+        required: false
+    requirements:
+      - cluster:
+          capability: tosca.capabilities.Compute
+          node: cloud_native.nodes.AbstractContainerOrchestratorCluster
+          relationship: tosca.relationships.HostedOn
+    capabilities:
+      # Agora o Workspace passa a ser o "host" para os componentes
+      host:
+        type: tosca.capabilities.Compute
+        valid_source_types: [ cloud_native.nodes.AbstractComponent ]
+        
   cloud_native.nodes.AbstractStorage:
     description: Stores data.
     derived_from: tosca.nodes.Abstract.Storage
@@ -249,6 +272,38 @@ node_types:
         valid_source_types: [ cloud_native.nodes.AbstractComponent ]
 
   # Kubernetes-specific Node Types
+
+  cloud_native.nodes.Kubernetes.Namespace:
+    derived_from: cloud_native.nodes.AbstractWorkspace
+    properties:
+      annotations:
+        type: map
+        entry_schema: { type: string }
+        required: false
+      labels:
+        type: map
+        entry_schema: { type: string }
+        required: false
+  node_types:
+  cloud_native.nodes.AbstractWorkspace:
+    description: Base para qualquer unidade de isolamento.
+    derived_from: tosca.nodes.Root
+    # Propriedades de governança que discutimos (FinOps, quotas)
+
+  # Especialização para quem não usa Cluster (Serverless Puro)
+  cloud_native.nodes.CloudProjectWorkspace:
+    derived_from: cloud_native.nodes.AbstractWorkspace
+    properties:
+      region:
+        type: string
+        required: true
+      cloud_provider:
+        type: string
+        constraints: [{ valid_values: [ aws, gcp, azure ] }]
+    capabilities:
+      host:
+        type: tosca.capabilities.Compute
+        valid_source_types: [ cloud_native.nodes.AbstractComponent ]
 
   cloud_native.nodes.Kubernetes.KubernetesApplication:
     description: A Kubernetes deployable application that implements business features.
