@@ -178,16 +178,37 @@ node_types:
     capabilities:
       storage:
         type: tosca.capabilities.Storage
-        valid_source_types: [cloud_native.nodes.AbstractComponent]
+        valid_source_types: [cloud_native.nodes.AbstractComponent]  
 
   cloud_native.nodes.AbstractContainerOrchestratorVolume:
     description: Stores data of components running in a container orchestrator cluster.
-    derived_from: cloud_native.nodes.AbstractStorage
+    derived_from: cloud_native.nodes.BlockStorage # Herança específica
     requirements:
       - cluster:
-          description: Cluster where the storage is defined
-          relationship: cloud_native.relationships.DefinedOn
           capability: cloud_native.capabilities.Cluster.StorageDefinition
+          relationship: cloud_native.relationships.DefinedOn
+          node: cloud_native.nodes.AbstractContainerOrchestratorCluster
+          occurrences: [ 1, 1 ]
+
+  # Subtipo para Discos/Volumes
+  cloud_native.nodes.BlockStorage:
+    derived_from: cloud_native.nodes.AbstractStorage
+    properties:
+      size:
+        type: scalar-unit.size
+        required: true
+    capabilities:
+      attachment:
+        type: tosca.capabilities.Attachment # Permite o uso de 'AttachesTo'
+        valid_source_types: [ cloud_native.nodes.AbstractInfrastructure ]
+
+  # Subtipo para S3/Blob
+  cloud_native.nodes.ObjectStorage:
+    derived_from: cloud_native.nodes.AbstractStorage
+    capabilities:
+      endpoint:
+        type: tosca.capabilities.Endpoint # Oferece uma URL de acesso
+        valid_source_types: [ cloud_native.nodes.AbstractComponent ]
 
   # Kubernetes-specific Node Types
 
@@ -303,10 +324,20 @@ relationship_types:
     valid_target_types: [cloud_native.capabilities.Cluster.Management]
 
   cloud_native.relationships.DefinedOn:
-    description: Defines in which cluster the storage is defined on.
-    derived_from: tosca.relationships.Root
-    valid_target_types: [cloud_native.capabilities.Cluster.StorageDefinition]
-
+    description: Describes a logical association where a resource definition is managed by a specific cluster control plane.
+    derived_from: tosca.relationships.DependsOn # Garante que o Cluster venha antes do Volume
+    valid_target_types: [ cloud_native.capabilities.Cluster.StorageDefinition ]
+    properties:
+      namespace:
+        type: string
+        required: false
+        description: The logical isolation unit (namespace, project, tenant) within the cluster.
+        default: default
+      context_name:
+        type: string
+        required: false
+        description: Optional label for the orchestration context (e.g., storage-class name).
+        
   cloud_native.relationships.DeclaredBy:
     description: Defines in which application the container is defined on.
     derived_from: tosca.relationships.Root
