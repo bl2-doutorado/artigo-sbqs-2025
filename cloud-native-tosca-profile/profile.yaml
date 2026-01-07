@@ -93,7 +93,7 @@ node_types:
       finops:
         type: cloud_native.datatypes.FinOpsTags
         required: true
-      updateStrategy:
+      update_strategy:
         type: cloud_native.datatypes.AbstractComponentUpdateStrategy
         required: false
 
@@ -102,7 +102,7 @@ node_types:
           description: Infrastructure needed to deploy the component
           capability: tosca.capabilities.Compute
           # count_range: [1, 1]
-          occurrences: [1, 1]
+          occurrences: [0, 1]
           node: cloud_native.nodes.AbstractInfrastructure
       - endpoint_link:
           description: Allows the definition of links between Components
@@ -313,12 +313,25 @@ capability_types:
     derived_from: tosca.capabilities.Root
   cloud_native.capabilities.Cluster.StorageDefinition:
     derived_from: tosca.capabilities.Root
+    description: Indicates that the node can act as a management plane for storage resources.
   cloud_native.capabilities.Application.ContainerDeclaration:
     derived_from: tosca.capabilities.Root
 relationship_types:
   cloud_native.relationships.PersistsOn:
-    derived_from: tosca.relationships.Root
-    valid_target_types: [tosca.capabilities.Storage]
+    description: Relationship used by a component to store persistent data on a storage resource.
+    derived_from: tosca.relationships.DependsOn
+    valid_target_types: [ tosca.capabilities.Storage ]
+    properties:
+      mount_path:
+        type: string
+        required: false
+        description: O caminho absoluto dentro do componente onde o storage será montado (ex: /var/lib/mysql).
+      access_mode:
+        type: string
+        default: ReadWriteOnce
+        constraints:
+          - valid_values: [ ReadWriteOnce, ReadOnlyMany, ReadWriteMany ]
+        description: Define como o componente acessa o volume (padrão do Kubernetes/CSI).
   cloud_native.relationships.ManagedBy:
     derived_from: tosca.relationships.Root
     valid_target_types: [cloud_native.capabilities.Cluster.Management]
