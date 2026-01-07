@@ -284,16 +284,44 @@ node_types:
           relationship: cloud_native.relationships.DeclaredBy
 
   cloud_native.nodes.Kubernetes.KubernetesCluster:
-    description: Kubernetes cluster managed by an specific Kubernete distribution like K0s, K3s, RKE2, MicroK8s, among other.
+    description: Kubernetes cluster managed by a specific distribution (K0s, K3s, RKE2, etc).
     derived_from: cloud_native.nodes.AbstractContainerOrchestratorCluster
+    properties:
+      # Propriedades específicas de K8s para automação de rede
+      pod_cidr:
+        type: string
+        default: "10.42.0.0/16"
+        description: "Network range for pod IPs."
+      service_cidr:
+        type: string
+        default: "10.43.0.0/16"
+        description: "Network range for service IPs."
+      api_endpoint:
+        type: string
+        required: false
+        description: "The internal or external URL of the Kubernetes API Server."
 
   cloud_native.nodes.Kubernetes.KubernetesClusterNode:
     description: Physical or virtual machines that joined a Kubernetes cluster.
     derived_from: cloud_native.nodes.AbstractContainerOrchestratorClusterNode
+    properties:
+      # Labels e Taints são fundamentais para o agendamento de pods
+      labels:
+        type: map
+        entry_schema: { type: string }
+        required: false
+        description: "Kubernetes node labels (e.g., disktype: ssd)."
+      taints:
+        type: list
+        entry_schema:
+          type: string # Exemplo: "key=value:effect"
+        required: false
+        description: "Kubernetes node taints to repel pods."
     requirements:
       - cluster:
           node: cloud_native.nodes.Kubernetes.KubernetesCluster
-          description: Cluster that the node is joined
+          relationship: cloud_native.relationships.ManagedBy
+          capability: cloud_native.capabilities.Cluster.Management
 
   cloud_native.nodes.Kubernetes.AbstractKubernetesVolume:
     description: Any kind of Kubernetes defined volume.
