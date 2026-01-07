@@ -3,9 +3,9 @@ description: Cloud-native profile
 
 data_types:
   cloud_native.datatypes.AbstractComponentScalability:
+    description: Defines horizontal scaling boundaries for a component.
     properties:
       min_instances:
-        description: Indicates the minimum number of instances that should be created for the associated TOSCA Node Template by a TOSCA orchestrator.
         type: integer
         required: true
         default: 1
@@ -13,7 +13,6 @@ data_types:
           - greater_or_equal: 0
 
       max_instances:
-        description: Indicates the maximum number of instances that should be created for the associated TOSCA Node Template by a TOSCA orchestrator.
         type: integer
         required: true
         default: 1
@@ -22,9 +21,9 @@ data_types:
         validation:
           $greater_or_equal:
             - $value
-            - $get_property: [SELF, minimum-instances]
+            - $get_property: [ SELF, scalability, min_instances ]
+
       default_instances:
-        description: Indicates the requested default number of instances that should be the starting number of instances a TOSCA orchestrator should attempt to allocate. This value MUST be in the range between the values set for 'min_instances' and 'max_instances' properties.
         type: integer
         required: false
         constraints:
@@ -33,10 +32,21 @@ data_types:
           $and:
             - $greater_or_equal:
                 - $value
-                - $get_property: [SELF, scalability.min_instance]
+                - $get_property: [ SELF, scalability, min_instances ]
             - $less_or_equal:
                 - $value
-                - $get_property: [SELF, scalability.max_instance]
+                - $get_property: [ SELF, scalability, max_instances ]
+      # Adicionando "HINTS" para o orquestrador
+      target_cpu_utilization:
+        type: integer
+        required: false
+        description: "Métrica alvo para gatilho de escala (ex: 70 para 70%)."
+        constraints:
+          - in_range: [ 1, 100 ]
+      target_mem_utilization:
+        type: integer
+        required: false
+        description: "Métrica alvo de memória para gatilho de escala."
   cloud_native.datatypes.AbstractComponentUpdateStrategy:
     properties:
       strategy:
