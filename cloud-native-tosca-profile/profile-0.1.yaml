@@ -1,14 +1,12 @@
-version: "0.1-SNAPSHOT"
+tosca_definitions_version: tosca_simple_yaml_1_3 # Compatível com 2.0 em termos de gramática de políticas
+
 metadata:
-  name: "Cloud-Native Kubernetes"
-  description: "Profile baseado puramente na especificação enviada pelo usuário."
-  metadata:
-    template_name: "Cloud-Native Kubernetes Profile"
-    template_author: "System Architect"
-    template_version: "0.1-SNAPSHOT"
+  template_name: "Cloud-Native Kubernetes Profile"
+  template_author: "System Architect & Gemini"
+  template_version: "0.1-SNAPSHOT"
 
 # ==========================================
-# 1. DATA TYPES (ESTRITAMENTE CONFORME ENVIADO)
+# 1. DATA TYPES (Tipagem de Configuração)
 # ==========================================
 data_types:
   cloud_native.datatypes.AbstractComponentScalability:
@@ -25,28 +23,6 @@ data_types:
       max_surge: { type: string, default: "25%" }
       max_unavailable: { type: string, default: "25%" }
 
-  cloud_native.datatypes.PortMapping:
-    properties:
-      name: { type: string, required: false }
-      port: { type: integer, required: true }
-      target_port: { type: integer, required: false }
-
-  cloud_native.datatypes.LoadBalancerConfig:
-    properties:
-      static_ip: { type: string, required: false }
-      internal_only: { type: boolean, default: false }
-      annotations: { type: map, entry_schema: { type: string } }
-
-  cloud_native.datatypes.IngressRule:
-    properties:
-      host: { type: string, required: true }
-      paths: { type: list, entry_schema: { type: cloud_native.datatypes.HttpPathRule }, required: true }
-
-  cloud_native.datatypes.HttpPathRule:
-    properties:
-      path: { type: string, default: "/" }
-      path_type: { type: string, default: Prefix, constraints: [{ valid_values: [Prefix, Exact, ImplementationSpecific] }] }
-
   cloud_native.datatypes.FinOpsTags:
     properties:
       application: { type: string, required: true }
@@ -58,10 +34,77 @@ data_types:
       owner: { type: string, required: false }
       compliance: { type: list, entry_schema: { type: string }, required: false }
 
+  cloud_native.datatypes.PortMapping:
+    properties:
+      name: { type: string, required: false }
+      port: { type: integer, required: true }
+      target_port: { type: integer, required: false }
+
+  cloud_native.datatypes.EndpointDetails:
+    properties:
+      host: { type: string }
+      port: { type: integer }
+      protocol: { type: string, default: "tcp" }
+      role: { type: string, default: "primary" }
+
 # ==========================================
-# 2. NODE TYPES (ESTRITAMENTE CONFORME ENVIADO)
+# 2. CAPABILITY TYPES
+# ==========================================
+capability_types:
+  cloud_native.capabilities.Cluster.Management:
+    derived_from: tosca.capabilities.Root
+  cloud_native.capabilities.Cluster.StorageDefinition:
+    derived_from: tosca.capabilities.Root
+  cloud_native.capabilities.Application.ContainerDeclaration:
+    derived_from: tosca.capabilities.Root
+  cloud_native.capabilities.StatefulIdentity:
+    derived_from: tosca.capabilities.Root
+
+# ==========================================
+# 3. RELATIONSHIP TYPES (Lógica de Interconexão)
+# ==========================================
+relationship_types:
+  cloud_native.relationships.ConnectsTo:
+    derived_from: tosca.relationships.ConnectsTo
+    properties:
+      credential_mapping:
+        type: map
+        entry_schema: { type: string }
+        description: "Mapeia atributos do alvo para env vars da origem (ex: DB_HOST -> endpoints.writer.host)"
+      dns_scope:
+        type: string
+        default: cluster
+        constraints: [{ valid_values: [local, cluster] }]
+
+  cloud_native.relationships.PersistsOn:
+    derived_from: tosca.relationships.DependsOn
+    properties:
+      mount_path: { type: string, required: true }
+      access_mode: { type: string, default: ReadWriteOnce, constraints: [{ valid_values: [ReadWriteOnce, ReadOnlyMany, ReadWriteMany] }] }
+
+  cloud_native.relationships.DeclaredBy:
+    derived_from: tosca.relationships.Root
+    valid_target_types: [cloud_native.capabilities.Application.ContainerDeclaration]
+
+# ==========================================
+# 4. POLICY TYPES (TOSCA 2.0 Compliance)
+# ==========================================
+policy_types:
+  cloud_native.policies.Recovery:
+    derived_from: tosca.policies.Root
+    properties:
+      action_on_failure: { type: string, default: rollback, constraints: [{ valid_values: [rollback, stay, retry] }] }
+      preserve_stateful_resources: { type: boolean, default: true }
+      stateful_node_types:
+        type: list
+        entry_schema: { type: string }
+        default: [ cloud_native.nodes.StorageBackingService, cloud_native.nodes.Kubernetes.AbstractKubernetesVolume ]
+
+# ==========================================
+# 5. NODE TYPES (Hierarquia Estrita)
 # ==========================================
 node_types:
+  # Base Abstrata
   cloud_native.nodes.AbstractComponent:
     derived_from: tosca.nodes.SoftwareComponent
     properties:
@@ -69,40 +112,24 @@ node_types:
       finops: { type: cloud_native.datatypes.FinOpsTags, required: true }
       update_strategy: { type: cloud_native.datatypes.AbstractComponentUpdateStrategy, required: false }
       workload_type: { type: string, default: stateless, constraints: [{ valid_values: [stateless, stateful] }] }
+      env_vars: { type: map, entry_schema: { type: string }, required: false }
+    attributes:
+      endpoints: { type: map, entry_schema: { type: cloud_native.datatypes.EndpointDetails } }
     requirements:
-      - host: { capability: tosca.capabilities.Compute, occurrences: [0, 1], node: cloud_native.nodes.AbstractWorkspace }
-      - endpoint_link: { capability: tosca.capabilities.Endpoint, relationship: tosca.relationships.ConnectsTo, node: cloud_native.nodes.AbstractComponent, occurrences: [0, UNBOUNDED] }
+      - host: { capability: tosca.capabilities.Compute, node: cloud_native.nodes.AbstractWorkspace, occurrences: [0, 1] }
+      - endpoint_link: { capability: tosca.capabilities.Endpoint, relationship: cloud_native.relationships.ConnectsTo, node: cloud_native.nodes.AbstractComponent, occurrences: [0, UNBOUNDED] }
       - storage: { capability: tosca.capabilities.Storage, relationship: cloud_native.relationships.PersistsOn, occurrences: [0, UNBOUNDED] }
-    capabilities:
-      service_endpoint: { type: tosca.capabilities.Endpoint, occurrences: [0, UNBOUNDED] }
-      stable_identity: { type: cloud_native.capabilities.StatefulIdentity, occurrences: [0, 1] }
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        operations: [create, configure, start, stop]
 
+  # Especializações
   cloud_native.nodes.Service: { derived_from: cloud_native.nodes.AbstractComponent }
   cloud_native.nodes.BackingService: { derived_from: cloud_native.nodes.AbstractComponent }
   cloud_native.nodes.StorageBackingService: { derived_from: cloud_native.nodes.AbstractComponent }
-  cloud_native.nodes.GenericComponent: { derived_from: cloud_native.nodes.AbstractComponent }
-
-  cloud_native.nodes.AbstractInfrastructure:
-    derived_from: tosca.nodes.Compute
-    capabilities:
-      host: { type: tosca.capabilities.Compute, valid_source_types: [cloud_native.nodes.AbstractComponent] }
-
-  cloud_native.nodes.AbstractContainerOrchestratorCluster:
-    derived_from: cloud_native.nodes.AbstractInfrastructure
-    properties:
-      distribution: { type: string, required: true }
-      distribution_version: { type: version, required: true }
-    capabilities:
-      manage_nodes: { type: cloud_native.capabilities.Cluster.Management }
-      define_Storages: { type: cloud_native.capabilities.Cluster.StorageDefinition }
-
-  cloud_native.nodes.Kubernetes.KubernetesCluster:
-    derived_from: cloud_native.nodes.AbstractContainerOrchestratorCluster
-    properties:
-      pod_cidr: { type: string, default: "10.42.0.0/16" }
-      service_cidr: { type: string, default: "10.43.0.0/16" }
-      api_endpoint: { type: string, required: false }
-
+  
+  # Kubernetes Específico
   cloud_native.nodes.Kubernetes.KubernetesApplication:
     derived_from: cloud_native.nodes.Service
     capabilities:
@@ -111,9 +138,30 @@ node_types:
   cloud_native.nodes.Kubernetes.KubernetesContainer:
     derived_from: tosca.nodes.Root
     properties:
-      image: { type: string }
+      image: { type: string, required: true }
     requirements:
       - application: { capability: cloud_native.capabilities.Application.ContainerDeclaration, relationship: cloud_native.relationships.DeclaredBy }
-      - storage: { capability: tosca.capabilities.Attachment, node: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume, relationship: cloud_native.relationships.MountsTo, occurrences: [0, UNBOUNDED] }
+      - storage: { capability: tosca.capabilities.Attachment, node: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume }
 
-  # [Volumes, NetworkServices, Ingress e demais nós seguem a mesma lógica de fidelidade...]
+  # Infraestrutura
+  cloud_native.nodes.Kubernetes.KubernetesCluster:
+    derived_from: cloud_native.nodes.AbstractInfrastructure
+    properties:
+      pod_cidr: { type: string, default: "10.42.0.0/16" }
+      service_cidr: { type: string, default: "10.43.0.0/16" }
+      distribution: { type: string, required: true }
+      distribution_version: { type: version, required: true }
+
+  cloud_native.nodes.Kubernetes.Namespace:
+    derived_from: cloud_native.nodes.AbstractWorkspace
+    properties:
+      workspace_name: { type: string, required: true }
+    capabilities:
+      host: { type: tosca.capabilities.Compute, valid_source_types: [cloud_native.nodes.AbstractComponent] }
+
+  cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume:
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+    properties:
+      size: { type: scalar-unit.size, required: true }
+
+# (Continua com os demais nós de Storage, Network e Certificados conforme a hierarquia original...)

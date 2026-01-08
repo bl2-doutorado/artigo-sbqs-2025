@@ -728,3 +728,41 @@ relationship_types:
         entry_schema: { type: string }
         description: "Mapeia atributos do alvo para env vars da origem. Ex: { 'DB_URL': 'host' }"
         required: false
+      dns_scope:
+        type: string
+        default: cluster # Pode ser 'local' ou 'cluster'
+        constraints:
+          - valid_values: [ local, cluster ]
+
+
+policies:
+  cloud_native.policies.Recovery:
+  derived_from: tosca.policies.Root
+  description: Define o comportamento do orquestrador em caso de erro no ciclo de vida.
+  properties:
+    action_on_failure:
+      type: string
+      default: rollback
+      constraints:
+        - valid_values: [ rollback, stay, retry ]
+    max_retries:
+      type: integer
+      default: 3
+      description: "Número de tentativas na fase de 'start' antes de desistir."
+    cleanup_on_error:
+      type: boolean
+      default: true
+      description: "Se true, remove recursos órfãos (como volumes) se o componente falhar."
+    # SAFETY SWITCH
+      preserve_stateful_resources:
+        type: boolean
+        default: true
+        description: "Se true, impede a exclusão de nós do tipo Storage ou Stateful durante o rollback."
+      
+      stateful_node_types:
+        type: list
+        entry_schema: { type: string }
+        default: 
+          - cloud_native.nodes.StorageBackingService
+          - cloud_native.nodes.Kubernetes.PersistentVolumeClaim
+        description: "Lista de tipos que nunca devem ser removidos automaticamente."
