@@ -10,6 +10,46 @@ imports:
 topology_template:
   node_templates:
 
+  # 1. DEFINIÇÃO DO GRUPO DE NÓS PARA STORAGE
+    node-storage-optimized:
+      type: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+      properties:
+        node_role: storage
+        labels:
+          storage: "true"
+          disktype: "ssd"
+        taints:
+          - "dedicated=database:NoSchedule" # Bloqueia pods que não toleram este taint
+      requirements:
+        - cluster: meu-cluster
+
+    # 2. BANCO DE DADOS C COM REQUISITO DE POSICIONAMENTO
+    banco-c:
+      type: cloud_native.nodes.StorageBackingService
+      properties:
+        workload_type: stateful
+        finops: { application: "loja", environment: prod, team: "dba", cost_center: "99" }
+      requirements:
+        - host: meu-namespace
+        # Vinculamos o banco ao nó específico via um requisito de placement
+        - placement: 
+            node: node-storage-optimized
+            relationship: tosca.relationships.HostedOn
+
+    # 3. CONTAINER DO BANCO (Precisa "aceitar" o Taint do nó)
+    container-banco:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "mysql:8.0"
+        # Adicionamos tolerations para permitir que ele rode no nó com taint
+        tolerations: 
+          - key: "dedicated"
+            operator: "Equal"
+            value: "database"
+            effect: "NoSchedule"
+      requirements:
+        - application: banco-c
+
     # ==========================================
     # 1. INFRAESTRUTURA E NAMESPACE
     # ==========================================

@@ -6,6 +6,18 @@ metadata:
 description: Cloud-native profile
 
 data_types:
+  cloud_native.datatypes.KubernetesToleration:
+    properties:
+      key: { type: string }
+      operator: { type: string, default: "Equal", constraints: [{ valid_values: [Equal, Exists] }] }
+      value: { type: string, required: false }
+      effect: { type: string, default: "NoSchedule", constraints: [{ valid_values: [NoSchedule, PreferNoSchedule, NoExecute] }] }
+
+  cloud_native.datatypes.KubernetesAffinity:
+    properties:
+      nodeAffinity: { type: map, entry_schema: { type: string }, required: false }
+      podAffinity: { type: map, entry_schema: { type: string }, required: false }
+      podAntiAffinity: { type: map, entry_schema: { type: string }, required: false }
   cloud_native.datatypes.AbstractComponentScalability:
     description: Defines horizontal scaling boundaries for a component.
     properties:
@@ -246,9 +258,21 @@ node_types:
   cloud_native.nodes.Service:
     description: A cloud-native service.
     derived_from: cloud_native.nodes.AbstractComponent
+    requirements:
+      - placement: 
+            capability: tosca.capabilities.Node
+            node: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+            relationship: tosca.relationships.HostedOn
+            occurrences: [0, 1]
   cloud_native.nodes.BackingService:
     description: A cloud-native backing service like a log aggregator or a business process engine.
     derived_from: cloud_native.nodes.AbstractComponent
+    requirements:
+      - placement: 
+            capability: tosca.capabilities.Node
+            node: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+            relationship: tosca.relationships.HostedOn
+            occurrences: [0, 1]
   cloud_native.nodes.StorageBackingService:
     description: A cloud-native storage backing service like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
     derived_from: cloud_native.nodes.AbstractComponent
@@ -257,6 +281,12 @@ node_types:
         type: map
         entry_schema:
           type: cloud_native.datatypes.EndpointDetails
+    requirements:
+      - placement: 
+            capability: tosca.capabilities.Node
+            node: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+            relationship: tosca.relationships.HostedOn
+            occurrences: [0, 1]
     
   cloud_native.nodes.GenericComponent:
     description: Represents a component that can not be mapped to any other service kind.
@@ -310,12 +340,14 @@ node_types:
         default: worker
         constraints:
           - valid_values: [ worker, ingress, storage, master ]
+      instance_type: { type: string, required: false }
     requirements:
       - cluster:
           description: Cluster that the node is joined
           capability: cloud_native.capabilities.Cluster.Management
           relationship: cloud_native.relationships.ManagedBy
           node: cloud_native.nodes.AbstractContainerOrchestratorCluster
+      
 
   cloud_native.nodes.AbstractNetworkService:
     description: >
@@ -540,6 +572,11 @@ node_types:
     capabilities:
       declare:
         type: cloud_native.capabilities.Application.ContainerDeclaration
+    requirements:
+    - placement:
+        capability: tosca.capabilities.Node # Capacidade de ser colocado em um nó
+        node: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+        relationship: tosca.relationships.HostedOn
 
   cloud_native.nodes.Kubernetes.KubernetesDependency:
     description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
@@ -561,6 +598,13 @@ node_types:
     properties:
       image:
         type: string
+      tolerations:
+        type: list
+        entry_schema: { type: cloud_native.datatypes.KubernetesToleration }
+        required: false
+      affinity:
+        type: cloud_native.datatypes.KubernetesAffinity
+        required: false
     requirements:
       - application:
           description: Application that declares the container.
@@ -594,6 +638,16 @@ node_types:
     description: Physical or virtual machines that joined a Kubernetes cluster.
     derived_from: cloud_native.nodes.AbstractContainerOrchestratorClusterNode
     properties:
+      instance_type: 
+        type: string
+        required: true
+        description: "Tipo de máquina na nuvem (ex: m5.large)"
+      min_size:
+        type: integer
+        default: 1
+      max_size:
+        type: integer
+        default: 10
       # Labels e Taints são fundamentais para o agendamento de pods
       labels:
         type: map
