@@ -6,6 +6,26 @@ metadata:
 description: Cloud-native profile
 
 data_types:
+  cloud_native.datatypes.ContainerDefinition:
+    derived_from: tosca.datatypes.Root
+    properties:
+      name: { type: string, required: true }
+      image: { type: string, required: true }
+      # Incluindo recursos (resolvendo a crítica de esconabilidade)
+      resources:
+        type: map
+        entry_schema: { type: string } # ex: cpu: 500m, memory: 512Mi
+        required: true
+      ports:
+        type: list
+        entry_schema: { type: cloud_native.datatypes.PortMapping }
+      env_vars:
+        type: map
+        entry_schema: { type: string }
+      # Tolerations agora ficam aqui dentro
+      tolerations:
+        type: list
+        entry_schema: { type: cloud_native.datatypes.KubernetesToleration }
   cloud_native.datatypes.KubernetesToleration:
     properties:
       key: { type: string }
@@ -569,14 +589,26 @@ node_types:
   cloud_native.nodes.Kubernetes.KubernetesApplication:
     description: A Kubernetes deployable application that implements business features.
     derived_from: cloud_native.nodes.Service
+    properties:
+      # A mágica acontece aqui: uma lista de containers
+      containers:
+        type: list
+        entry_schema: { type: cloud_native.datatypes.ContainerDefinition }
+        constraints: [{ min_length: 1 }]
     capabilities:
       declare:
         type: cloud_native.capabilities.Application.ContainerDeclaration
     requirements:
-    - placement:
-        capability: tosca.capabilities.Node # Capacidade de ser colocado em um nó
-        node: cloud_native.nodes.Kubernetes.KubernetesClusterNode
-        relationship: tosca.relationships.HostedOn
+      - placement:
+          capability: tosca.capabilities.Node # Capacidade de ser colocado em um nó
+          node: cloud_native.nodes.Kubernetes.KubernetesClusterNode
+          relationship: tosca.relationships.HostedOn
+      # O armazenamento agora é mapeado via nome do container
+      - storage:
+          capability: tosca.capabilities.Attachment
+          node: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+          relationship: cloud_native.relationships.MountsTo
+          occurrences: [0, UNBOUNDED]
 
   cloud_native.nodes.Kubernetes.KubernetesDependency:
     description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
