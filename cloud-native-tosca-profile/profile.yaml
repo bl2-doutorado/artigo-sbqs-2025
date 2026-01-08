@@ -71,6 +71,34 @@ data_types:
         required: false
         default: "25%"
 
+  cloud_native.datatypes.PortMapping:
+    properties:
+      name:
+        type: string
+        required: false # ex: "http", "metrics"
+      port:
+        type: integer
+        description: The port exposed by the service (the entry point).
+        required: true
+      target_port:
+        type: integer
+        description: The port the component is actually listening on.
+        required: false # Se nulo, assume-se igual ao 'port'
+  cloud_native.datatypes.LoadBalancerConfig:
+    properties:
+      static_ip:
+        type: string
+        required: false
+      internal_only:
+        type: boolean
+        default: false
+        description: "If true, the cloud provider will create a private Load Balancer."
+      annotations:
+        type: map
+        entry_schema: { type: string }
+        required: false
+        description: "Provider-specific settings (e.g. service.beta.kubernetes.io/aws-load-balancer-type)."
+
   cloud_native.datatypes.FinOpsTags:
     description: Mandatory and optional tags for financial operations and governance.
     properties:
@@ -128,6 +156,14 @@ node_types:
       update_strategy:
         type: cloud_native.datatypes.AbstractComponentUpdateStrategy
         required: false
+      workload_type:
+        type: string
+        default: stateless
+        constraints:
+          - valid_values: [ stateless, stateful ]
+        description: >
+          'stateless' maps to a Deployment (anonymous pods). 
+          'stateful' maps to a StatefulSet (ordered, stable identity).
 
     requirements:
       - host:
@@ -154,6 +190,9 @@ node_types:
         description: A layer 4 endpoint provided by the component.
         type: tosca.capabilities.Endpoint
         occurrences: [0, UNBOUNDED]
+      stable_identity:
+        type: cloud_native.capabilities.StatefulIdentity
+        occurrences: [0, 1] # Se estiver presente, vira StatefulSet
 
   cloud_native.nodes.Service:
     description: A cloud-native service.
@@ -164,7 +203,7 @@ node_types:
   cloud_native.nodes.StorageBackingService:
     description: A cloud-native storage backing service like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
     derived_from: cloud_native.nodes.AbstractComponent
-
+    
   cloud_native.nodes.GenericComponent:
     description: Represents a component that can not be mapped to any other service kind.
     derived_from: cloud_native.nodes.AbstractComponent
@@ -175,6 +214,19 @@ node_types:
       host:
         type: tosca.capabilities.Compute
         valid_source_types: [cloud_native.nodes.AbstractComponent]
+  # Especialização por Vendor
+  cloud_native.nodes.aws.EKSCluster:
+    derived_from: cloud_native.nodes.Kubernetes.KubernetesCluster
+    properties:
+      role_arn: { type: string }
+      public_access: { type: boolean, default: false }
+      encryption_key: { type: string, required: false }
+
+  cloud_native.nodes.gcp.GKECluster:
+    derived_from: cloud_native.nodes.Kubernetes.KubernetesCluster
+    properties:
+      project_id: { type: string }
+      enable_autopilot: { type: boolean, default: true }
 
   cloud_native.nodes.AbstractContainerOrchestratorCluster:
     description: A cluster managed by a Container Orchestrator like Kubernetes or Nomad.
@@ -211,7 +263,44 @@ node_types:
           relationship: cloud_native.relationships.ManagedBy
           node: cloud_native.nodes.AbstractContainerOrchestratorCluster
 
-  
+  cloud_native.nodes.AbstractNetworkService:
+    description: >
+      An abstract node that defines how a component is exposed to the network.
+      It maps incoming traffic to the component's internal ports.
+    derived_from: tosca.nodes.Root
+    properties:
+      port_mappings:
+        type: list
+        description: List of port mappings (Service port -> Target port).
+        entry_schema:
+          type: cloud_native.datatypes.PortMapping
+        required: true
+      
+      exposure_type:
+        type: string
+        description: Defines the scope of the service.
+        required: true
+        default: internal
+        constraints:
+          - valid_values: [ internal, node, external, headless ]
+
+      protocol:
+        type: string
+        default: TCP
+        constraints:
+          - valid_values: [ TCP, UDP, SCTP, HTTP, GRPC ]
+      load_balancer_config:
+        type: cloud_native.datatypes.LoadBalancerConfig
+        required: false
+
+    requirements:
+      - backend:
+          description: The component that this service exposes.
+          capability: tosca.capabilities.Endpoint
+          node: cloud_native.nodes.AbstractComponent
+          relationship: tosca.relationships.ConnectsTo
+          occurrences: [1, 1]
+
   cloud_native.nodes.AbstractWorkspace:
     description: A logical isolation unit within a cluster (Namespace, Project, etc).
     derived_from: tosca.nodes.Root
@@ -232,6 +321,22 @@ node_types:
       host:
         type: tosca.capabilities.Compute
         valid_source_types: [ cloud_native.nodes.AbstractComponent ]
+  
+  # Especialização para quem não usa Cluster (Serverless Puro)
+  cloud_native.nodes.CloudProjectWorkspace:
+    derived_from: cloud_native.nodes.AbstractWorkspace
+    properties:
+      region:
+        type: string
+        required: true
+      cloud_provider:
+        type: string
+        constraints: [{ valid_values: [ aws, gcp, azure ] }]
+    capabilities:
+      host:
+        type: tosca.capabilities.Compute
+        valid_source_types: [ cloud_native.nodes.AbstractComponent ]
+
         
   cloud_native.nodes.AbstractStorage:
     description: Stores data.
@@ -284,27 +389,34 @@ node_types:
         type: map
         entry_schema: { type: string }
         required: false
-  node_types:
-  cloud_native.nodes.AbstractWorkspace:
-    description: Base para qualquer unidade de isolamento.
-    derived_from: tosca.nodes.Root
-    # Propriedades de governança que discutimos (FinOps, quotas)
 
-  # Especialização para quem não usa Cluster (Serverless Puro)
-  cloud_native.nodes.CloudProjectWorkspace:
-    derived_from: cloud_native.nodes.AbstractWorkspace
+  
+  cloud_native.nodes.Kubernetes.NetworkService:
+    description: >
+      A Kubernetes-specific service implementation. 
+      Maps Abstract requirements to K8s Service manifests.
+    derived_from: cloud_native.nodes.AbstractNetworkService
     properties:
-      region:
+      session_affinity:
         type: string
-        required: true
-      cloud_provider:
+        default: None
+        constraints:
+          - valid_values: [ None, ClientIP ]
+      
+      external_traffic_policy:
         type: string
-        constraints: [{ valid_values: [ aws, gcp, azure ] }]
-    capabilities:
-      host:
-        type: tosca.capabilities.Compute
-        valid_source_types: [ cloud_native.nodes.AbstractComponent ]
+        default: Cluster
+        constraints:
+          - valid_values: [ Local, Cluster ]
+        description: "Controls if traffic is routed to local-node pods or cluster-wide."
 
+      load_balancer_source_ranges:
+        type: list
+        entry_schema: { type: string }
+        required: false
+        description: "IP CIDRs allowed to access the LoadBalancer."
+        
+  
   cloud_native.nodes.Kubernetes.KubernetesApplication:
     description: A Kubernetes deployable application that implements business features.
     derived_from: cloud_native.nodes.Service
@@ -427,7 +539,7 @@ node_types:
 
   cloud_native.nodes.Kubernetes.EmptyDirKubernetesVolume:
     description: A volume that is a created when a Kubernetes Pod is assigned to a node, and it is initially empty.
-    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+    derived_from: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume   
 
 capability_types:
   cloud_native.capabilities.Cluster.Management:
