@@ -1,0 +1,113 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+
+metadata:
+  template_name: "Blueprint App A-B-C com Containers e DeclaredBy"
+  template_version: "1.1.0"
+
+imports:
+  - cloud-native-k8s-profile.yaml
+
+topology_template:
+  node_templates:
+
+    # ==========================================
+    # 1. INFRAESTRUTURA E NAMESPACE
+    # ==========================================
+    meu-cluster:
+      type: cloud_native.nodes.Kubernetes.KubernetesCluster
+      properties:
+        distribution: "aks"
+        distribution_version: "1.29"
+
+    meu-namespace:
+      type: cloud_native.nodes.Kubernetes.Namespace
+      properties:
+        workspace_name: "producao"
+
+    # ==========================================
+    # 2. COMPONENTE C: BANCO DE DADOS (STATEFUL)
+    # ==========================================
+    volume-banco:
+      type: cloud_native.nodes.Kubernetes.PersistentVolumeClaimKubernetesVolume
+      properties:
+        size: 20Gi
+
+    banco-c:
+      type: cloud_native.nodes.StorageBackingService
+      properties:
+        workload_type: stateful
+        finops: { application: "loja", environment: prod, team: "dba", cost_center: "99" }
+      requirements:
+        - host: meu-namespace
+
+    container-banco:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "mysql:8.0"
+      requirements:
+        - application: banco-c # Relacionamento DeclaredBy
+        - storage: 
+            node: volume-banco
+            relationship: cloud_native.relationships.MountsTo
+
+    # ==========================================
+    # 3. COMPONENTE B: API DE BACKEND
+    # ==========================================
+    app-b:
+      type: cloud_native.nodes.Kubernetes.KubernetesApplication
+      properties:
+        finops: { application: "loja", environment: prod, team: "dev-back", cost_center: "100" }
+      requirements:
+        - host: meu-namespace
+        - endpoint_link:
+            node: banco-c
+            relationship:
+              type: cloud_native.relationships.ConnectsTo
+              properties:
+                credential_mapping:
+                  DB_HOST: "endpoints.primary.host"
+
+    container-app-b:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "minha-api-backend:v2.1"
+      requirements:
+        - application: app-b # Relacionamento DeclaredBy
+
+    # ==========================================
+    # 4. COMPONENTE A: FRONTEND / GATEWAY
+    # ==========================================
+    app-a:
+      type: cloud_native.nodes.Kubernetes.KubernetesApplication
+      properties:
+        finops: { application: "loja", environment: prod, team: "dev-front", cost_center: "101" }
+      requirements:
+        - host: meu-namespace
+        - endpoint_link:
+            node: app-b
+            relationship:
+              type: cloud_native.relationships.ConnectsTo
+              properties:
+                credential_mapping:
+                  BACKEND_URL: "endpoints.api.host"
+
+    container-app-a:
+      type: cloud_native.nodes.Kubernetes.KubernetesContainer
+      properties:
+        image: "meu-frontend:v1.0"
+      requirements:
+        - application: app-a # Relacionamento DeclaredBy
+
+    # ==========================================
+    # 5. EXPOSIÇÃO PÚBLICA (INGRESS + CERT)
+    # ==========================================
+    cert-ssl:
+      type: cloud_native.nodes.Kubernetes.Certificate
+      properties:
+        common_name: "loja.com"
+
+    ingress-principal:
+      type: cloud_native.nodes.Kubernetes.NetworkIngress
+      requirements:
+        - target: app-a
+        - certificate: cert-ssl
