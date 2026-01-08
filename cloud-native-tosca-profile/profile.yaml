@@ -1,4 +1,4 @@
-tosca_definitions_version: tosca_simple_yaml_1_3
+  tosca_definitions_version: tosca_simple_yaml_1_3
 description: Cloud-native profile
 
 data_types:
@@ -98,6 +98,30 @@ data_types:
         entry_schema: { type: string }
         required: false
         description: "Provider-specific settings (e.g. service.beta.kubernetes.io/aws-load-balancer-type)."
+
+  cloud_native.datatypes.IngressRule:
+    properties:
+      host:
+        type: string
+        description: "Ex: api.meuprojeto.com"
+        required: true
+      paths:
+        type: list
+        entry_schema:
+          type: cloud_native.datatypes.HttpPathRule
+        required: true
+
+  cloud_native.datatypes.HttpPathRule:
+    properties:
+      path:
+        type: string
+        description: "Ex: /v1/users"
+        default: "/"
+      path_type:
+        type: string
+        constraints:
+          - valid_values: [ Prefix, Exact, ImplementationSpecific ]
+        default: Prefix
 
   cloud_native.datatypes.FinOpsTags:
     description: Mandatory and optional tags for financial operations and governance.
@@ -301,6 +325,32 @@ node_types:
           relationship: tosca.relationships.ConnectsTo
           occurrences: [1, 1]
 
+  cloud_native.nodes.AbstractNetworkIngress:
+    description: >
+      Defines external access rules to services based on HTTP hosts and paths.
+    derived_from: tosca.nodes.Root
+    properties:
+      rules:
+        type: list
+        entry_schema:
+          type: cloud_native.datatypes.IngressRule
+        required: true
+      tls_enabled:
+        type: boolean
+        default: false
+    requirements:
+      # O Ingress "usa" um ou mais NetworkServices
+      - backends:
+          capability: tosca.capabilities.Endpoint
+          node: cloud_native.nodes.AbstractNetworkService
+          relationship: tosca.relationships.RoutesTo # Novo relacionamento
+          occurrences: [1, UNBOUNDED]
+      - certificate:
+          capability: tosca.capabilities.Root 
+          node: cloud_native.nodes.AbstractCertificate # Aceita qualquer herdeiro
+          relationship: tosca.relationships.DependsOn
+          occurrences: [0, 1]
+
   cloud_native.nodes.AbstractWorkspace:
     description: A logical isolation unit within a cluster (Namespace, Project, etc).
     derived_from: tosca.nodes.Root
@@ -321,6 +371,19 @@ node_types:
       host:
         type: tosca.capabilities.Compute
         valid_source_types: [ cloud_native.nodes.AbstractComponent ]
+
+  cloud_native.nodes.AbstractCertificate:
+    derived_from: tosca.nodes.Root
+    properties:
+      common_name:
+        type: string
+        required: true
+        description: "O domínio principal (ex: api.empresa.com)"
+      alt_names:
+        type: list
+        entry_schema: { type: string }
+        required: false
+        description: "SANs (Subject Alternative Names)"
   
   # Especialização para quem não usa Cluster (Serverless Puro)
   cloud_native.nodes.CloudProjectWorkspace:
@@ -376,6 +439,14 @@ node_types:
         type: tosca.capabilities.Endpoint # Oferece uma URL de acesso
         valid_source_types: [ cloud_native.nodes.AbstractComponent ]
 
+  cloud_native.nodes.aws.ACMCertificate:
+    derived_from: cloud_native.nodes.AbstractCertificate
+    properties:
+      validation_method:
+        type: string
+        constraints: [{ valid_values: [ DNS, EMAIL ] }]
+        default: DNS
+
   # Kubernetes-specific Node Types
 
   cloud_native.nodes.Kubernetes.Namespace:
@@ -416,6 +487,22 @@ node_types:
         required: false
         description: "IP CIDRs allowed to access the LoadBalancer."
         
+  cloud_native.nodes.kubernetes.CertManagerCertificate:
+    derived_from: cloud_native.nodes.AbstractCertificate
+    properties:
+      issuer_name:
+        type: string
+        default: "letsencrypt-prod"
+      dns_challenge_provider:
+        type: string
+        required: false # Para validação automática via DNS
+  cloud_native.nodes.kubernetes.NetworkIngress:
+    derived_from: cloud_native.nodes.AbstractNetworkIngress
+    requirements:
+      - certificate:
+          # Aqui acontece a restrição:
+          node: cloud_native.nodes.kubernetes.CertManagerCertificate 
+          occurrences: [0, 1]
   
   cloud_native.nodes.Kubernetes.KubernetesApplication:
     description: A Kubernetes deployable application that implements business features.
@@ -449,6 +536,11 @@ node_types:
           description: Application that declares the container.
           capability: cloud_native.capabilities.Application.ContainerDeclaration
           relationship: cloud_native.relationships.DeclaredBy
+      - storage:
+        capability: tosca.capabilities.Attachment
+        node: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
+        relationship: cloud_native.relationships.MountsTo
+        occurrences: [0, UNBOUNDED]
 
   cloud_native.nodes.Kubernetes.KubernetesCluster:
     description: Kubernetes cluster managed by a specific distribution (K0s, K3s, RKE2, etc).
@@ -588,3 +680,13 @@ relationship_types:
     description: Defines in which application the container is defined on.
     derived_from: tosca.relationships.Root
     valid_target_types: [cloud_native.capabilities.Application.ContainerDeclaration]
+  cloud_native.relationships.MountsTo:
+    derived_from: tosca.relationships.ConnectsTo
+    properties:
+      mount_path:
+        type: string
+        required: true
+        description: "O caminho dentro do container (ex: /var/lib/mysql)"
+      read_only:
+        type: boolean
+        default: false
