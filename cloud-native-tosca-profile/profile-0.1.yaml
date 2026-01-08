@@ -1,0 +1,119 @@
+version: "0.1-SNAPSHOT"
+metadata:
+  name: "Cloud-Native Kubernetes"
+  description: "Profile baseado puramente na especificação enviada pelo usuário."
+  metadata:
+    template_name: "Cloud-Native Kubernetes Profile"
+    template_author: "System Architect"
+    template_version: "0.1-SNAPSHOT"
+
+# ==========================================
+# 1. DATA TYPES (ESTRITAMENTE CONFORME ENVIADO)
+# ==========================================
+data_types:
+  cloud_native.datatypes.AbstractComponentScalability:
+    properties:
+      min_instances: { type: integer, required: true, default: 1 }
+      max_instances: { type: integer, required: true, default: 1 }
+      default_instances: { type: integer, required: false }
+      target_cpu_utilization: { type: integer, required: false }
+      target_mem_utilization: { type: integer, required: false }
+
+  cloud_native.datatypes.AbstractComponentUpdateStrategy:
+    properties:
+      type: { type: string, required: true, default: rolling_update, constraints: [{ valid_values: [rolling_update, recreate, blue_green, canary] }] }
+      max_surge: { type: string, default: "25%" }
+      max_unavailable: { type: string, default: "25%" }
+
+  cloud_native.datatypes.PortMapping:
+    properties:
+      name: { type: string, required: false }
+      port: { type: integer, required: true }
+      target_port: { type: integer, required: false }
+
+  cloud_native.datatypes.LoadBalancerConfig:
+    properties:
+      static_ip: { type: string, required: false }
+      internal_only: { type: boolean, default: false }
+      annotations: { type: map, entry_schema: { type: string } }
+
+  cloud_native.datatypes.IngressRule:
+    properties:
+      host: { type: string, required: true }
+      paths: { type: list, entry_schema: { type: cloud_native.datatypes.HttpPathRule }, required: true }
+
+  cloud_native.datatypes.HttpPathRule:
+    properties:
+      path: { type: string, default: "/" }
+      path_type: { type: string, default: Prefix, constraints: [{ valid_values: [Prefix, Exact, ImplementationSpecific] }] }
+
+  cloud_native.datatypes.FinOpsTags:
+    properties:
+      application: { type: string, required: true }
+      environment: { type: string, required: true, constraints: [{ valid_values: [dev, staging, prod, sandbox] }] }
+      team: { type: string, required: true }
+      cost_center: { type: string, required: true }
+      managed_via: { type: string, required: true, default: manual }
+      project: { type: string, required: false }
+      owner: { type: string, required: false }
+      compliance: { type: list, entry_schema: { type: string }, required: false }
+
+# ==========================================
+# 2. NODE TYPES (ESTRITAMENTE CONFORME ENVIADO)
+# ==========================================
+node_types:
+  cloud_native.nodes.AbstractComponent:
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      scalability: { type: cloud_native.datatypes.AbstractComponentScalability, required: false }
+      finops: { type: cloud_native.datatypes.FinOpsTags, required: true }
+      update_strategy: { type: cloud_native.datatypes.AbstractComponentUpdateStrategy, required: false }
+      workload_type: { type: string, default: stateless, constraints: [{ valid_values: [stateless, stateful] }] }
+    requirements:
+      - host: { capability: tosca.capabilities.Compute, occurrences: [0, 1], node: cloud_native.nodes.AbstractWorkspace }
+      - endpoint_link: { capability: tosca.capabilities.Endpoint, relationship: tosca.relationships.ConnectsTo, node: cloud_native.nodes.AbstractComponent, occurrences: [0, UNBOUNDED] }
+      - storage: { capability: tosca.capabilities.Storage, relationship: cloud_native.relationships.PersistsOn, occurrences: [0, UNBOUNDED] }
+    capabilities:
+      service_endpoint: { type: tosca.capabilities.Endpoint, occurrences: [0, UNBOUNDED] }
+      stable_identity: { type: cloud_native.capabilities.StatefulIdentity, occurrences: [0, 1] }
+
+  cloud_native.nodes.Service: { derived_from: cloud_native.nodes.AbstractComponent }
+  cloud_native.nodes.BackingService: { derived_from: cloud_native.nodes.AbstractComponent }
+  cloud_native.nodes.StorageBackingService: { derived_from: cloud_native.nodes.AbstractComponent }
+  cloud_native.nodes.GenericComponent: { derived_from: cloud_native.nodes.AbstractComponent }
+
+  cloud_native.nodes.AbstractInfrastructure:
+    derived_from: tosca.nodes.Compute
+    capabilities:
+      host: { type: tosca.capabilities.Compute, valid_source_types: [cloud_native.nodes.AbstractComponent] }
+
+  cloud_native.nodes.AbstractContainerOrchestratorCluster:
+    derived_from: cloud_native.nodes.AbstractInfrastructure
+    properties:
+      distribution: { type: string, required: true }
+      distribution_version: { type: version, required: true }
+    capabilities:
+      manage_nodes: { type: cloud_native.capabilities.Cluster.Management }
+      define_Storages: { type: cloud_native.capabilities.Cluster.StorageDefinition }
+
+  cloud_native.nodes.Kubernetes.KubernetesCluster:
+    derived_from: cloud_native.nodes.AbstractContainerOrchestratorCluster
+    properties:
+      pod_cidr: { type: string, default: "10.42.0.0/16" }
+      service_cidr: { type: string, default: "10.43.0.0/16" }
+      api_endpoint: { type: string, required: false }
+
+  cloud_native.nodes.Kubernetes.KubernetesApplication:
+    derived_from: cloud_native.nodes.Service
+    capabilities:
+      declare: { type: cloud_native.capabilities.Application.ContainerDeclaration }
+
+  cloud_native.nodes.Kubernetes.KubernetesContainer:
+    derived_from: tosca.nodes.Root
+    properties:
+      image: { type: string }
+    requirements:
+      - application: { capability: cloud_native.capabilities.Application.ContainerDeclaration, relationship: cloud_native.relationships.DeclaredBy }
+      - storage: { capability: tosca.capabilities.Attachment, node: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume, relationship: cloud_native.relationships.MountsTo, occurrences: [0, UNBOUNDED] }
+
+  # [Volumes, NetworkServices, Ingress e demais nós seguem a mesma lógica de fidelidade...]

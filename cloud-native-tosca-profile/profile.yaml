@@ -1,4 +1,8 @@
-  tosca_definitions_version: tosca_simple_yaml_1_3
+tosca_definitions_version: tosca_simple_yaml_1_3
+metadata:
+  template_name: "Cloud-Native Profile"
+  template_author: "Anonymous"
+  template_version: "0.1-SNAPSHOT"
 description: Cloud-native profile
 
 data_types:
@@ -47,7 +51,18 @@ data_types:
         type: integer
         required: false
         description: "Métrica alvo de memória para gatilho de escala."
-  
+  cloud_native.datatypes.EndpointDetails:
+    properties:
+      host: { type: string }
+      port: { type: integer }
+      protocol: { type: string, default: "tcp" }
+      role: { type: string, constraints: [primary, replica, internal, public] }
+  cloud_native.datatypes.ConfigResource:
+    properties:
+      file_path: { type: string, description: "Caminho onde o arquivo será montado no container" }
+      content: { type: string, description: "Conteúdo bruto do arquivo" }
+      read_only: { type: boolean, default: true }
+
   cloud_native.datatypes.AbstractComponentUpdateStrategy:
     description: Strategy for updating components without downtime.
     properties:
@@ -188,6 +203,16 @@ node_types:
         description: >
           'stateless' maps to a Deployment (anonymous pods). 
           'stateful' maps to a StatefulSet (ordered, stable identity).
+      env_vars:
+        type: map
+        entry_schema: { type: string }
+        description: "Variáveis de ambiente (serão convertidas em Secrets)."
+    
+      config_files:
+        type: map
+        entry_schema: 
+          type: cloud_native.datatypes.ConfigResource
+        description: "Mapeamento de nome de arquivo para seu conteúdo e destino."
 
     requirements:
       - host:
@@ -227,6 +252,11 @@ node_types:
   cloud_native.nodes.StorageBackingService:
     description: A cloud-native storage backing service like a SQL database, eg. PostgresSQL, a NoSQL database, eg. Cassandra, or any other type of storage backing service.
     derived_from: cloud_native.nodes.AbstractComponent
+    attributes:
+      endpoints:
+        type: map
+        entry_schema:
+          type: cloud_native.datatypes.EndpointDetails
     
   cloud_native.nodes.GenericComponent:
     description: Represents a component that can not be mapped to any other service kind.
@@ -690,3 +720,11 @@ relationship_types:
       read_only:
         type: boolean
         default: false
+  cloud_native.relationships.ConnectsTo:
+    derived_from: tosca.relationships.ConnectsTo
+    properties:
+      credential_mapping:
+        type: map
+        entry_schema: { type: string }
+        description: "Mapeia atributos do alvo para env vars da origem. Ex: { 'DB_URL': 'host' }"
+        required: false
