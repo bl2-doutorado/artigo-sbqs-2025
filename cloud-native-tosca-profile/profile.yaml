@@ -6,6 +6,20 @@ metadata:
 description: Cloud-native profile
 
 data_types:
+  cloud_native.datatypes.SecretReference:
+    derived_from: string
+    description: "Uma referência a um segredo externo (ex: vault://...)"
+  cloud_native.datatypes.InfraFinOpsTags:
+    derived_from: cloud_native.datatypes.FinOpsTags
+    properties:
+      provider: 
+        type: string
+        constraints: [{ valid_values: [aws, gcp, azure, on-premise] }]
+      purchasing_model:
+        type: string
+        default: on_demand
+        constraints: [{ valid_values: [on_demand, spot, reserved] }]
+      region: { type: string, required: true }
   cloud_native.datatypes.ContainerDefinition:
     derived_from: tosca.datatypes.Root
     properties:
@@ -246,6 +260,19 @@ node_types:
           type: cloud_native.datatypes.ConfigResource
         description: "Mapeamento de nome de arquivo para seu conteúdo e destino."
 
+      # O "Mapa de Escape" para evitar anotações excessivas no Profile
+      # Tudo que for específico de nuvem ou driver vai aqui
+      additional_metadata:
+        type: map
+        entry_schema: { type: string }
+        required: false
+        description: "Injetado como annotations no K8s ou meta no Nomad"
+
+      # Abstração de Placement (evita o termo 'tolerations')
+      scheduling_requirements:
+        type: list
+        entry_schema: { type: string } # Ex: ["dedicated:db", "gpu:true"]
+
     requirements:
       - host:
           description: Infrastructure needed to deploy the component
@@ -342,6 +369,9 @@ node_types:
       distribution_version:
         type: version
         required: true
+      finops: 
+        type: cloud_native.datatypes.InfraFinOpsTags
+        required: true
 
     capabilities:
       host:
@@ -360,6 +390,7 @@ node_types:
         default: worker
         constraints:
           - valid_values: [ worker, ingress, storage, master ]
+      
       instance_type: { type: string, required: false }
     requirements:
       - cluster:
@@ -630,13 +661,13 @@ node_types:
     properties:
       image:
         type: string
-      tolerations:
-        type: list
-        entry_schema: { type: cloud_native.datatypes.KubernetesToleration }
-        required: false
-      affinity:
-        type: cloud_native.datatypes.KubernetesAffinity
-        required: false
+      #tolerations:
+      #  type: list
+      #  entry_schema: { type: cloud_native.datatypes.KubernetesToleration }
+      #  required: false
+      #affinity:
+      #  type: cloud_native.datatypes.KubernetesAffinity
+      #  required: false
     requirements:
       - application:
           description: Application that declares the container.
@@ -681,17 +712,17 @@ node_types:
         type: integer
         default: 10
       # Labels e Taints são fundamentais para o agendamento de pods
-      labels:
-        type: map
-        entry_schema: { type: string }
-        required: false
-        description: "Kubernetes node labels (e.g., disktype: ssd)."
-      taints:
-        type: list
-        entry_schema:
-          type: string # Exemplo: "key=value:effect"
-        required: false
-        description: "Kubernetes node taints to repel pods."
+      #labels:
+      #  type: map
+      #  entry_schema: { type: string }
+      #  required: false
+      #  description: "Kubernetes node labels (e.g., disktype: ssd)."
+      #taints:
+      #  type: list
+      #  entry_schema:
+      #    type: string # Exemplo: "key=value:effect"
+      #  required: false
+      #  description: "Kubernetes node taints to repel pods."
     requirements:
       - cluster:
           node: cloud_native.nodes.Kubernetes.KubernetesCluster
@@ -822,33 +853,44 @@ relationship_types:
 
 
 policies:
-  cloud_native.policies.Recovery:
-  derived_from: tosca.policies.Root
-  description: Define o comportamento do orquestrador em caso de erro no ciclo de vida.
-  properties:
-    action_on_failure:
-      type: string
-      default: rollback
-      constraints:
-        - valid_values: [ rollback, stay, retry ]
-    max_retries:
-      type: integer
-      default: 3
-      description: "Número de tentativas na fase de 'start' antes de desistir."
-    cleanup_on_error:
-      type: boolean
-      default: true
-      description: "Se true, remove recursos órfãos (como volumes) se o componente falhar."
-    # SAFETY SWITCH
-      preserve_stateful_resources:
-        type: boolean
-        default: true
-        description: "Se true, impede a exclusão de nós do tipo Storage ou Stateful durante o rollback."
-      
-      stateful_node_types:
+    cloud_native.policies.LocalityEnforcement:
+    derived_from: tosca.policies.Root
+    description: "Garante que componentes conectados residam na mesma Nuvem e Região."
+    properties:
+      enforcement_level:
+        type: string
+        default: "strict" # strict (bloqueia) ou advisory (apenas avisa)
+      scope:
         type: list
         entry_schema: { type: string }
-        default: 
-          - cloud_native.nodes.StorageBackingService
-          - cloud_native.nodes.Kubernetes.PersistentVolumeClaim
-        description: "Lista de tipos que nunca devem ser removidos automaticamente."
+        default: ['provider', 'region']
+  cloud_native.policies.Recovery:
+    derived_from: tosca.policies.Root
+    description: Define o comportamento do orquestrador em caso de erro no ciclo de vida.
+    properties:
+      action_on_failure:
+        type: string
+        default: rollback
+        constraints:
+          - valid_values: [ rollback, stay, retry ]
+      max_retries:
+        type: integer
+        default: 3
+        description: "Número de tentativas na fase de 'start' antes de desistir."
+      cleanup_on_error:
+        type: boolean
+        default: true
+        description: "Se true, remove recursos órfãos (como volumes) se o componente falhar."
+      # SAFETY SWITCH
+        preserve_stateful_resources:
+          type: boolean
+          default: true
+          description: "Se true, impede a exclusão de nós do tipo Storage ou Stateful durante o rollback."
+        
+        stateful_node_types:
+          type: list
+          entry_schema: { type: string }
+          default: 
+            - cloud_native.nodes.StorageBackingService
+            - cloud_native.nodes.Kubernetes.PersistentVolumeClaim
+          description: "Lista de tipos que nunca devem ser removidos automaticamente."
