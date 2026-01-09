@@ -640,6 +640,15 @@ node_types:
           node: cloud_native.nodes.Kubernetes.AbstractKubernetesVolume
           relationship: cloud_native.relationships.MountsTo
           occurrences: [0, UNBOUNDED]
+    interfaces:
+      Standard:
+        create:
+          inputs:
+            # Capturando dados do alvo (TARGET) do relacionamento 'cluster'
+            join_token: { get_attribute: [ SELF, cluster, bootstrap_token ] }
+            master_ip: { get_attribute: [ SELF, cluster, api_server_endpoint ] }
+            ca_cert: { get_attribute: [ SELF, cluster, cluster_ca_cert ] }
+          implementation: scripts/setup_join_credentials.sh
 
   cloud_native.nodes.Kubernetes.KubernetesDependency:
     description: A Kubernetes deployable application that implements common functionalities used by the Kubernetes Applications.
@@ -783,6 +792,18 @@ node_types:
 capability_types:
   cloud_native.capabilities.Cluster.Management:
     derived_from: tosca.capabilities.Root
+    description: "Interface de gerenciamento para adesão de novos nós ao cluster."
+    attributes:
+      # Dados gerados em tempo de execução pelo orquestrador/nuvem
+      bootstrap_token:
+        type: string
+        description: "Token de autenticação para o kubelet (Join Token)."
+      cluster_ca_cert:
+        type: string
+        description: "Certificado da CA do cluster para validação de identidade."
+      api_server_endpoint:
+        type: string
+        description: "Endereço DNS/IP do API Server (capturado do KubernetesCluster)."
   cloud_native.capabilities.Cluster.StorageDefinition:
     derived_from: tosca.capabilities.Root
     description: Indicates that the node can act as a management plane for storage resources.
@@ -805,8 +826,16 @@ relationship_types:
           - valid_values: [ ReadWriteOnce, ReadOnlyMany, ReadWriteMany ]
         description: Define como o componente acessa o volume (padrão do Kubernetes/CSI).
   cloud_native.relationships.ManagedBy:
-    derived_from: tosca.relationships.Root
+#derived_from: tosca.relationships.Root
     valid_target_types: [cloud_native.capabilities.Cluster.Management]
+    derived_from: tosca.relationships.ConnectsTo
+    description: "Relação que transfere credenciais do Cluster para o Nó."
+    interfaces:
+      Configure:
+        pre_configure_source:
+          # O motor executa um script que pega o token do TARGET (Cluster)
+          # e prepara o SOURCE (Node) antes de ele ligar.
+          implementation: scripts/setup_join_credentials.sh
 
   cloud_native.relationships.DefinedOn:
     description: Describes a logical association where a resource definition is managed by a specific cluster control plane.
